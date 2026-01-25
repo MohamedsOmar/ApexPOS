@@ -18,7 +18,6 @@ async function initPage() {
 }
 async function createPageStructure() {
 try{
-
     if(!userPermissions){return}
     let app = document.querySelector('#app')
     let contentContainer = document.createElement('div')
