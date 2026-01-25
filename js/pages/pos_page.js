@@ -1,255 +1,30 @@
-let userPermissions, 
-    sessionID = apex.env.APP_SESSION,
-    appID = apex.env.APP_ID,
-    activeUser = apex.env.APP_USER
-let invoiceID, openShiftID, headerSrcDataContainer, srcValuesHolder, selectedValues, posCategoriesContainer
-let discountAccess = false, createCashAccess = false, createCustomerAccess = false, posCashierOnlyAccess = false, overRideTaxAccess = false,posCashierAdmin = false
+var actionConfirmed = false
+var logFor='JavaScript', pageID = 9, logFile ='pos_page.js', logShift, logUser = activeUser
+
 let invoiceLinesItems = []
-const accessRoles = {
-    SUPER_USER:       "96268806872996572510171386761347521866",
-    CREATE_CUSTOMER: "95959979848418912790978149798646558686",
-    POS_CASHIER:     "95950591706144986175657814674178211076",
-    CREATE_CASH:     "95960885256253348064994365834003120777",
-    DISCOUNT:        "95945194037845973039104600264428639250",
-    OVERRIDE_TAX:    "96158064198195796792531173456791398221"
-};
-const pages = {
-    logOutUrl :`apex_authentication.logout?p_app_id=101&p_session_id=${sessionID}`,
-    masterDataPage: `/ords/r/carved/carved/master-data-page?session=${sessionID}`,
-    posPage :`/ords/r/carved/carved/pos-si-page?session=${sessionID}`,
-}
-function openModelPages(ptitle,pageId){
-    try{
-        apex.server.process(
-            "GET_MODEL_PAGE_URL",
-            {x01: pageId},
-            {
-                success: function(pData) {
-                    apex.navigation.dialog(pData,{
-                        title: ptitle,         
-                        width: '100vw',
-                        // height: 'auto',          
-                        modal: true,
-                        resizable: "yes",
-                        draggable: "yes",
-                        dialogOptions: {
-                            open: function() {
-                                setTimeout(adjustHeight, 100);
-                            }
-                        }
-                    });
-                },
-                dataType: "text"
-            }
-            
-        );
-
-        function adjustHeight(){
-            console.log('adjustHeight()')
-            let modelPageContainer = document.querySelector('.ui-dialog.ui-draggable')
-                modelPageContainer.style.height ='100vh'
-        }
-    }
-    catch(err){
-        console.error(`Err: ${err}`)
-    }
-}
-function toggleTheme() {
-    const html = document.documentElement;
-    const current = html.classList.contains('dark') ? 'light' : 'dark';
-    html.classList.remove('light', 'dark');
-    html.classList.add(current);
-    localStorage.setItem('theme', current);
-    const icon = document.querySelector('#switch');
-    icon.checked  = current == 'dark' ? false : true
-}
-function applySavedTheme (){
-    let saved = localStorage.getItem('theme');
-    if (!saved) {
-        saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    document.documentElement.classList.add(saved);
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-        if (!localStorage.getItem('theme')) {
-            document.documentElement.classList.toggle('dark', e.matches);
-        }
-    });
-    const icon = document.querySelector('#switch');
-          icon.checked  = saved == 'dark' ? false : true
-
-};
+let invoiceID, openShiftID, headerSrcDataContainer, srcValuesHolder, selectedValues, posCategoriesContainer
 /*================================================================ */
 //------------------- Get User Access
 /*================================================================*/
 document.addEventListener("DOMContentLoaded", initPOS);
 async function initPOS() {
     try {
-        const perms = await fetchUserAccess();
+        buildApp()
+        await fetchUserAccess();
+        await createNavBar(true, true)
+        await createPageStructure()
     } catch (err) {
         console.error("POS init failed:", err);
+        errLog(logFor,'initPOS()',pageID, logFile,err,logShift,logUser)
     }
-}
-async function fetchUserAccess() {
-    return new Promise((resolve, reject) => {
-        apex.server.process(
-            'GET_USER_ACCESS',
-            {},
-            {
-                dataType: 'json',
-                success: function (data) {
-                    if (data.found == 'Y') {
-                        userPermissions = data.items || [];
-                        const grantedRoles = new Set(userPermissions.map(item => item.roleID));
-                        posCashierAdmin = grantedRoles.has(accessRoles.SUPER_USER);
-                        createCustomerAccess   = posCashierAdmin || grantedRoles.has(accessRoles.CREATE_CUSTOMER);
-                        posCashierOnlyAccess   = grantedRoles.has(accessRoles.POS_CASHIER);
-                        createCashAccess       = posCashierAdmin || grantedRoles.has(accessRoles.CREATE_CASH);
-                        discountAccess         = posCashierAdmin || grantedRoles.has(accessRoles.DISCOUNT);
-                        overRideTaxAccess      = posCashierAdmin || grantedRoles.has(accessRoles.OVERRIDE_TAX);
-                        console.log("User Access →", {
-                            createCustomerAccess,
-                            posCashierOnlyAccess,
-                            createCashAccess,
-                            discountAccess,
-                            overRideTaxAccess,
-                            posCashierAdmin
-                        });
-                        // if(posCashierOnlyAccess){
-                        //     document.querySelector('.t-Body .t-Body-nav').style.display = 'none'
-                        //     document.querySelector('.t-Header .t-Header-controls').style.display = 'none'
-                        //     document.querySelector('.t-Header .t-Header-logo .t-Header-logo-link').removeAttribute('href')
-                        // }
-                        createPageStructure()
-                            .then(() => resolve(userPermissions))   
-                            .catch(reject);
-                        createNavBar()
-                    } else {
-                        userPermissions = null;
-                        createPageStructure().catch(console.error);
-                        resolve(null);
-                    }
-                },
-                error: function (jqXHR, textStatus, errorThrown) {
-                    console.error("APEX process error:", textStatus, errorThrown, jqXHR);
-                    apex.message.alert('Server error while fetching user access');
-                    reject(new Error("Failed to fetch user access"));
-                }
-            }
-        );
-    });
-}
-function createNavBar(){
-    let appNavBar = document.querySelector('#appNavBar')
-    let div = document.createElement('div')
-    div.classList.add('nav-bar-wrapper','bx-shadow-s','p-10','h-100','bg-clr-3');
-    div.innerHTML=`
-        <div class="nav-bar-content d-flex-c cntnt-sb gap-10 h-100 postion-r flow-h">
-            <div id="navigationBarMenueClose" class="postion-a click-btn d-flex algn-i-c cntnt-c cursor-p t-clr-5">
-                <span class="fa fa-times-circle t-size-5 t-clr-9" aria-hidden="true"></span>
-            </div>
-            <div class="nav-logo d-flex-c gap-10">
-                <div class="d-flex-c algn-i-c cntnt-c t-size-4 gap-10">
-                    <div class="img-holder" style="width: 120px;height: 120px;">
-                        <img src="r/carved/101/files/static/v6/icons/app-icon-256-rounded.png"/>
-                    </div>
-                    <div>Meme Gallery</div>
-                    <div class="t-size-t">User: ${activeUser}</div>
-                </div>
-            </div>
-            <ul class="nav-pages d-flex-c gap-10 flex-1">
-                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.posPage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
-                        <span class="fa fa fa-home" aria-hidden="true"></span>
-                        <span>POS Page</span>
-                    </a>
-                </li>
-                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.posPage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
-                        <span class="fa fa fa-home" aria-hidden="true"></span>
-                        <span>POS Page</span>
-                    </a>
-                </li>
-                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.posPage}  class="d-flex w-100 algn-i-c cntnt-fs gap-10">
-                        <span class="fa fa fa-home" aria-hidden="true"></span>
-                        <span>POS Page</span>
-                    </a>
-                <li class="d-flex algn-i-c cntnt-fs gap-10 hover-brdr-btn p-10 brdr-r-m t-size-m click-btn" onclick="openModelPages('Create Customer', 7)">
-                    <span class="fa fa fa-home" aria-hidden="true"></span>
-                    <span>SI-Invoice</span>
-                </li>
-                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.masterDataPage}  class="d-flex w-100 algn-i-c cntnt-fs gap-10">
-                        <span class="fa fa fa-home" aria-hidden="true"></span>
-                        <span>POS Page</span>
-                    </a>
-                </li>
-            </ul>
-            <div class="nav-actions d-flex-c gap-10 p-10 t-size-4 t-clr-5">
-                ${createCashAccess ? `
-                    <div class="d-flex algn-i-c cntnt-fs gap-10 hover-brdr-btn p-10 brdr-r-m t-size-m click-btn t-clr-7" 
-                        id="createCashEntryBtn" onclick="createCashEnrty()">
-                        <span class="fa fa-bitcoin" aria-hidden="true"></span>
-                        <span>Cash In/Out</span>
-                    </div>
-                ` : ''}
-
-                <div class="toggle-wrapper">
-                    <label for="switch" class="toggle">
-                        <input type="checkbox" class="input" id="switch" />
-                        <div class="icon icon--moon" onclick="toggleTheme()">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                width="32"
-                                height="32"
-                            >
-                                <path
-                                fill-rule="evenodd"
-                                d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"
-                                clip-rule="evenodd"
-                                ></path>
-                            </svg>
-                        </div>
-
-                        <div class="icon icon--sun" onclick="toggleTheme()">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                width="32"
-                                height="32"
-                            >
-                                <path
-                                d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"
-                                ></path>
-                            </svg>
-                        </div>
-                    </label>
-                </div>
-                <div class="w-100 btn-style d-flex-r gap-10 cntnt-c algn-i-c t-size-m hover-brdr-btn click-btn p-10 brdr-r-m" 
-                    onclick="closeOpenShift()">
-                    <span class="fa fa-times-square" aria-hidden="true"></span>
-                    <div>Close Shift</div>
-                </div>
-                <a href=${pages.logOutUrl} class="w-100 btn-style d-flex-r gap-10 cntnt-c algn-i-c t-size-m hover-brdr-btn click-btn p-10 brdr-r-m bg-clr-9">
-                    <span class="fa fa-sign-out" aria-hidden="true"></span>
-                    <div>Log Out</div>
-                </a>
-            </div>
-        </div>
-    `
-    appNavBar.appendChild(div)
-    applySavedTheme()
 }
 async function createPageStructure() {
+try{
     if(!userPermissions){return}
-    const pos = document.querySelector('#pos-container');
-    if (!pos) {
-        console.warn("#pos-container not found");
-        return;
-    }
+    let app = document.querySelector('#app')
+    let pos = document.createElement('div')
+    pos.id='pos-container'
+    pos.classList.add('pos-conatiner','width-100','flow-h','bg-clr-1','t-clr-7')  
     let divposWrapper = document.createElement('div');
     divposWrapper.classList.add('pos-wrapper','d-flex','cntnt-sb','h-100','w-100','d-flx-wrap','t-clr-7');
     divposWrapper.innerHTML = `
@@ -276,7 +51,7 @@ async function createPageStructure() {
         <div class="w-100">
             <div class="inv-header d-flex-r algn-i-c w-100">
                 <div class="inv-header-wrap d-flex-r cntnt-sb algn-i-fs w-100" style="padding: 10px 17px;">
-                    <h4 class="invoice-h t-bold margn-0">No Invoice Selected</h4>
+                    <h4 class="invoice-h t-bold margn-0">Select Invoice</h4>
                     <h4 class="invoice-customer margn-0 cursor-p margn-0 brdr-r-m"></h4>
                 </div>
             </div>  
@@ -303,16 +78,8 @@ async function createPageStructure() {
         </div>
     </div>
     `;
-
-/*
-    <div onclick="createNewInvoice()"class="create-new-invoice invoice-row click-btn hover-brdr-btn t-algn-c t-clr-3
-        bg-clr-5 postion-r h-100 brdr-r-m bx-shadow-s cursor-p d-flex-c algn-i-c p-10 gap-3 t-nwrap t-bold cntnt-c t-size-m"
-        id="createNewInvoice"
-        style="margin-right: 15px;"
-        title="Create New Invoice"> + 
-    </div>
-*/
     pos.appendChild(divposWrapper)
+    app.appendChild(pos)
     document.querySelector('#search-items').addEventListener('keyup', (e)=>{
         let textValue = (e.target.value).toUpperCase()
         let activeCat = document.querySelector('.is-cat-active.category-row')
@@ -334,38 +101,37 @@ async function createPageStructure() {
     })
     getOpenShift()
     posCategoriesContainer = document.getElementById("pos-categories");
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'createPageStructure()',pageID, logFile,err,logShift,logUser)
 }
-function getOpenShift(){
+}
+async function getOpenShift(){
+try{
     if(!userPermissions){return}
-    apex.server.process(
-        'GET_OPEN_SHIFT',
-        {},
-        {
-            dataType: 'json',
-            success: function (data) {
-                console.log(data)
-                if (data.found == 'Y') {
-                    openShiftID = data.open_shift
-                    fetchSrcData()
-                    fetchCategories()
-                    fetchItems()
-                }
-                else{
-                    openNewShift();
-                }
-            },
-            error: function (err) {
-                console.error(err);
-                apex.message.alert('Server error while fetching item');
-            }
-        }
-    );
+    let data = await apex.server.process('GET_OPEN_SHIFT',{},{dataType: 'json'})
+    if (data.found == 'Y') {
+        openShiftID = data.open_shift
+        logShift = openShiftID
+        fetchSrcData()
+        fetchCategories()
+        fetchItems()
+    }
+    else{
+        openNewShift();
+    }
+}catch(err) {
+    console.error(err);
+    apex.message.alert('Server error while fetching item');
+    errLog(logFor,'getOpenShift()',pageID, logFile,err,logShift,logUser)
+}
 }
 /*================================================================ */
 //------------------- Functions Runs on Page Load
 /*================================================================*/
 /* ------------------------ Get Items ------------------------ */
 function fetchSrcData(){
+try{
     let divContainer = document.createElement('div')
         divContainer.style.display = 'none' 
         divContainer.id = 'headerSrcDataContainer'
@@ -399,6 +165,10 @@ function fetchSrcData(){
     fetchOpenInvoices()
     fetchPaymentMethods()
     fetchTaxRates()
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'fetchSrcData()',pageID, logFile,err,logShift,logUser)
+}
 }
 async function fetchCategories() {
 try{
@@ -512,6 +282,7 @@ try{
     
 }catch(err){
     console.log(err)
+    errLog(logFor,'fetchCategories()',pageID, logFile,err,logShift,logUser)
 }
 }
 async function fetchItems() {
@@ -561,6 +332,7 @@ try{
     removeLaoder(posItemsContainer)
     console.error(err);
     apex.message.alert('Server error while fetching item');
+    errLog(logFor,'fetchItems()',pageID, logFile,err,logShift,logUser)
 }
 };
 /* ------------------------ Fetch Data On Page Load and Save It In Hidden Div ------------------------ */
@@ -649,7 +421,7 @@ try{
                     ele.classList.remove('selected-invoice')
                 })
                 inv.classList.add('selected-invoice')
-                document.querySelector('.inv-header .inv-header-wrap .invoice-h').textContent = `Invoice# ${invNum.replace('#','')}`
+                document.querySelector('.inv-header .inv-header-wrap .invoice-h').textContent = `Invoice #${invNum.replace('#','')}`
                 document.querySelector('.inv-header .inv-header-wrap .invoice-customer').textContent = `${cutomer}`
                 triggerChangedInvoice()
             })
@@ -662,12 +434,15 @@ try{
             let invId =ele.getAttribute('data-value')
             if(invId == invoiceID){
                 ele.classList.add('selected-invoice')
+                document.querySelector('.inv-header .inv-header-wrap .invoice-h').textContent = `Invoice #${ele.querySelector('.invoice').textContent.replace('#','').trim()}`
+                document.querySelector('.inv-header .inv-header-wrap .invoice-customer').textContent = `${ele.getAttribute('data-customer').trim()}`
             }
         })
     }
 }catch(err){
-                console.error(err);
-                apex.message.alert('Server error while fetching item');
+    console.error(err);
+    apex.message.alert('Server error while fetching item');
+    errLog(logFor,'fetchOpenInvoices()',pageID, logFile,err,logShift,logUser)
 }
 }
 async function fetchPaymentMethods() {
@@ -694,6 +469,7 @@ async function fetchPaymentMethods() {
     }catch(err){
         console.error(err);
         apex.message.alert('Server error while fetching item');
+        errLog(logFor,'fetchPaymentMethods()',pageID, logFile,err,logShift,logUser)
     }
 }
 function fetchTaxRates() {
@@ -729,96 +505,108 @@ function fetchTaxRates() {
         }
     );
 }
-function fetchCustomers(){
-    let div = document.createElement('div')
-    div.classList.add('inv-head-row')
-    div.innerHTML=`<div id="customerIds" class="ul-select-wrapper input" style="position: relative;">
-                    <div class="li-selected" data-value=""></div>
-                    <div class="dropdown-list"  style="position: absolute;">
-                        <input placeholder="Search..." type="text" class="dropdown-menu-search">
-                        <ul class="ul-dropdown-inner"></ul>
-                    </div>
-                </div>`
-    srcValuesHolder.appendChild(div)
-    apex.server.process(
-        'GET_CUSTOMERS',
-        {},
-        {
-            dataType: 'json',
-            success: function (data) {
-                if (data.found === 'Y') {
-                    let jsonData = data.items
-                    const parentElement = document.querySelector("#customerIds");
-                    const selectList = parentElement.querySelector(".ul-dropdown-inner");
-                    jsonData.forEach((item) => {
-                        const option = document.createElement('li');
-                            option.dataset.value = item.customer_id;
-                            option.value = item.customer_name 
-                            option.textContent = item.customer_name;
-                        selectList.appendChild(option);
-                    });
-                }
-            },
-            error: function (err) {
-                console.error(err);
-                apex.message.alert('Server error while fetching item');
-            }
-        }
-    );
-}
+// function fetchCustomers(){
+//     let div = document.createElement('div')
+//     div.classList.add('inv-head-row')
+//     div.innerHTML=`<div id="customerIds" class="ul-select-wrapper input" style="position: relative;">
+//                     <div class="li-selected" data-value=""></div>
+//                     <div class="dropdown-list"  style="position: absolute;">
+//                         <input placeholder="Search..." type="text" class="dropdown-menu-search">
+//                         <ul class="ul-dropdown-inner"></ul>
+//                     </div>
+//                 </div>`
+//     srcValuesHolder.appendChild(div)
+//     apex.server.process(
+//         'GET_CUSTOMERS',
+//         {},
+//         {
+//             dataType: 'json',
+//             success: function (data) {
+//                 if (data.found === 'Y') {
+//                     let jsonData = data.items
+//                     const parentElement = document.querySelector("#customerIds");
+//                     const selectList = parentElement.querySelector(".ul-dropdown-inner");
+//                     jsonData.forEach((item) => {
+//                         const option = document.createElement('li');
+//                             option.dataset.value = item.customer_id;
+//                             option.value = item.customer_name 
+//                             option.textContent = item.customer_name;
+//                         selectList.appendChild(option);
+//                     });
+//                 }
+//             },
+//             error: function (err) {
+//                 console.error(err);
+//                 apex.message.alert('Server error while fetching item');
+//             }
+//         }
+//     );
+// }
 /*-------------- Open Customers Page and Create New Customer ------------------*/
 async function openCustomersPage(){
+try{
+    if(!openShiftID){openNewShift(); return}
     if(!invoiceID){
-        errMessage('No Invoice Selected')
+        errMessage('Selecte Invoice First')
         return
     }
-    createOverlay()
-    let posOverlay = document.getElementById('overlay-container');
+    let overlayExist = false;
     let overlayConetent = document.querySelector('#overlay-content')
-        posOverlay.style.backgroundColor = '#00000040'
+    if(overlayConetent){
+        overlayExist = true
+    }else{
+        createOverlay();
+        overlayConetent = document.querySelector('#overlay-content')
+    }
     let div = document.createElement('div')
-    div.className = 'content-body'
-    div.id = 'content-body'
+    div.id = 'contentWrap01'
+    div.className = 'content-body-wrap'
+    div.style.cssText='z-index: 1;'
     div.innerHTML=`
-            <div class="form-wrap" style="width:80vw;height: 80vw;position:relative">
+            <div class="content-body" style="min-width: 60%;z-index: 1;">
+            <div class="form-wrap p-10">
                 <div class="form-title">Customers</div>
-                <div class="form-data" style="margin-top: 30px;">
-                    <div class="content-wrapper">
-                        
+                <div onclick=" ${overlayExist ? "removeElementWithID('contentWrap01')" : "removerOverlay()"}" 
+                    class="postion-a click-btn d-flex algn-i-c cntnt-c cursor-p t-clr-5" style="right: 10px;top: 7px;">
+                    <span class="fa fa-times-circle t-size-5 t-clr-9" aria-hidden="true"></span>
+                </div>
+                <div class="form-data" style="gap: 0;">
+                    <div class="input-group input-field w-100" style="margin: 0;" >
+                        <input type="text" placeholder="Search..." class="item-search-input" id="searchCustomer">
+                        <span class="fa fa-search t-clr-5" aria-hidden="true"></span>
                     </div>
-                    <div class="btns-wrap d-flex gap-10 w-100 cntnt-c" style="margin-top:10px">
+                    <div class="content-wrapper scroll-y scrol-bar-w-0">
+                        <div class="w-100 d-flex-r p-10" style="position: sticky;top: 0;text-wrap: nowrap;background: var(--bg-clr-1);padding: 10px 0;">
+                            <div class="flex-1">Customer Name</div>
+                            <div class="flex-1">Phone Number</div>
+                            <div class="flex-1">Address</div>
+                        </div>
+                    </div>
+                    <div class="btns-wrap d-flex gap-10 w-100 cntnt-c p-20">
                         ${!createCustomerAccess ? '' : `<button type="button" class="btn-style"  id="OpenCreateNewCustomer">Create New</button>`}
-                        <button type="button" class="btn-style"  onclick="removerOverlay()">Cancel</button>
                     </div>
                 </div>
-            </div>`
+            </div></div>`
     overlayConetent.appendChild(div)
     try{
         let data = await apex.server.process('GET_CUSTOMERS',{},{dataType: 'json'});
         if (data.found === 'Y') {
             let jsonData = data.items
-            const parentElement = document.querySelector("#content-body .form-data .content-wrapper");
-            const option = document.createElement('div');
-            // option.style.cssText= 'position: fixed;top: 15.5%;text-wrap: nowrap;display: flex;width: 71%;'
-            option.innerHTML =`
-            <div style="position: relative;height: 30px;width: 100%;">
-                <div>
-                    <div style="width:25%">Customer Name</div>
-                    <div style="width:25%">Phone Number</div>
-                    <div style="width:25%">Address</div>
-                </div>
-            </div>`
-            parentElement.appendChild(option);
-            parentElement.appendChild(option);
+            const parentElement = document.querySelector("#contentWrap01 .form-data .content-wrapper");
+            let classAdded = false
             jsonData.forEach((item) => {
                 const option = document.createElement('div');
-                option.classList.add('content-row')
+                option.classList.add('content-row','d-flex-r','hover-clr-1','cursor-p','p-10','brdr-r-m')
+                if(!classAdded){
+                    option.classList.add('bg-clr-1')
+                    classAdded = true
+                }else{classAdded = false}
                 option.dataset.value = item.customer_id;
                 option.innerHTML =`
-                                <div style="width:25%" class="name">${item.customer_name ? item.customer_name : ''}</div>
-                                <div style="width:25%">${item.customerPhone ? item.customer_name : ''}</div>
-                                <div style="width:25%">${item.customerAddress? item.customerAddress : ''} </div>
-                                <div style="width:25%">${item.customerIsDefault ? 'Yes' : 'No'}</div>`
+                                <div  class="name flex-1"">${item.customer_name ? item.customer_name : ''}</div>
+                                <div class="flex-1">${item.customerPhone ? item.customerPhone : ''}</div>
+                                <div class="flex-1">${item.customerAddress? item.customerAddress : ''} </div>
+                                `
                 parentElement.appendChild(option);
                 option.addEventListener('click',(e)=>{
                     let row = e.target.closest('.content-row')
@@ -833,58 +621,82 @@ async function openCustomersPage(){
                             ele.setAttribute('data-customer', customerName)
                             ele.querySelector('.customer').textContent= customerName
                         }
+                        if(overlayExist)overlayConetent.querySelector('.invCustomerName').textContent= customerName
                     })
-                    removerOverlay()
+                    if(overlayExist){removeElementWithID('contentWrap01')
+                    }else{removerOverlay()}
                     saveInvoiceHeader(0)
                 })
             });
         }
+    overlayConetent.querySelector('#searchCustomer').addEventListener('keyup', (e) => {
+        const txtVal = e.target.value.trim().toLowerCase();
+        overlayConetent.querySelectorAll('.content-row').forEach(row => {
+        const rowValue = row.textContent.toLowerCase();
+        if (txtVal === '') {
+            row.style.display = 'flex';
+            return;
+        }
+        if (rowValue.includes(txtVal)) {
+            row.style.display = 'flex';
+        } else {
+            row.style.display = 'none';
+        }
+        });
+    });
     }catch(err){
         console.error(err);
         apex.message.alert('Server error while fetching item');
+        errLog(logFor,'openCustomersPage()',pageID, logFile,err,logShift,logUser)
     }
     overlayConetent.querySelector('#OpenCreateNewCustomer')?.addEventListener('click', ()=> {
-        createCustomer()
+        createCustomer(overlayExist)
     })
-
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'openCustomersPage()',pageID, logFile,err,logShift,logUser)
 }
-function createCustomer(){
+}
+function createCustomer(overlayExist){
+try{
     let customerName, customerAddress, customerPhone;
     let overlayConetent = document.getElementById('overlay-content')
     if(!overlayConetent){return}
     let div = document.createElement('div')
-    div.className = 'content-body'
-    div.id = 'content-body'
+    div.id = 'contentWrap02'
+    div.className = 'content-body-wrap'
+    div.style.cssText='z-index: 2;'
     div.innerHTML=`
-        <div class="form-wrap wrap d-flex-c gap-10 cntnt-sb" style="">
+        <div class="content-body" style="width: 40%;height: 50%;z-index: 2;">
+        <div class="form-wrap wrap d-flex-c gap-10 cntnt-sb">
             <div class="form-title">Create Customer</div>
             <div class="form-data">
-                <div class="content-wrapper">
-                    <div class="content-row d-flex gap-10 algn-i-c">
+                <div class="content-wrapper d-flex-c gap-10 p-10 cntnt-c">
+                    <div class="content-row d-flex-c gap-10 algn-i-c">
                         <div class="inputGroup">
                             <input class="input" required="" autocomplete="off" type="text" id="new-customer-name">
                             <label for="cashamount">Customer Name</label>
                         </div>
                     </div>
-                    <div class="content-row d-flex gap-10 algn-i-c">
+                    <div class="content-row d-flex-c gap-10 algn-i-c">
                         <div class="inputGroup">
                             <input class="input" required="" autocomplete="off" type="text" id="new-customer-phone">
+                            <label for="cashamount" >Phone Number</label>
+                        </div>
+                    </div>
+                    <div class="content-row d-flex-c gap-10 algn-i-c">
+                        <div class="inputGroup">
+                            <input class="input" required="" autocomplete="off" type="text" id="new-customer-adreess">
                             <label for="cashamount">Address</label>
                         </div>
                     </div>
-                    <div class="content-row d-flex gap-10 algn-i-c">
-                        <div class="inputGroup">
-                            <input class="input" required="" autocomplete="off" type="text" id="new-customer-adreess">
-                            <label for="cashamount">Phone Number</label>
-                        </div>
-                    </div>
                 </div>
-                <div class="btns-wrap d-flex gap-10 w-100 ontent-c">
+                <div class="btns-wrap d-flex gap-10 w-100 cntnt-c p-10">
                     <button type="button"class="btn-style" id="createNewCustomer">Create</button>
-                    <button type="button"class="btn-style" onclick="removeElementWithID('content-body-02')">Cancel</button>
+                    <button type="button"class="btn-style" onclick="removeElementWithID('contentWrap02')">Cancel</button>
                 </div>
             </div>
-        </div>`
+        </div></div>`
     overlayConetent.appendChild(div)
     overlayConetent.querySelector('#createNewCustomer')?.addEventListener('click', ()=>{
         customerName = overlayConetent.querySelector('#new-customer-name')
@@ -903,157 +715,167 @@ function createCustomer(){
             customerName.focus()
             return 
         };
-        postCustomerData()
+        postCustomerData(overlayExist)
     });
-    function postCustomerData(){
-        apex.server.process(
-        "CREATE_NEW_CUSTOMER",
-        {
-            x01: customerName,
-            x02: customerPhone,
-            x03: customerAddress,
-        },
-        {
-            dataType: "json",
-            success: function (data) {
-                if (data.status !== "SUCCESS") {
-                    apex.message.alert(data.message || "Error saving invoice");
-                    return;
-                }else{
-                    console.log(data)
-                    if(data.customerExist){
-                        let overlayConetent = document.getElementById('overlay-content')
-                        let customerName = overlayConetent.querySelector('#new-customer-name')
-                        const existingError = overlayConetent.querySelector('.err-message');
-                        if (existingError) {
-                            existingError.remove();
-                        }
-                        let errorDiv = document.createElement('div')
-                        errorDiv.className = 'err-message'
-                        errorDiv.textContent = '*Customer Exists'
-                        const inputGroup = customerName.closest('.content-row');
-                        inputGroup.insertAdjacentElement('afterend', errorDiv);
-                        customerName.focus()
-                        return 
-                    }
-                    removeElementWithID('content-body-02')
+    async function postCustomerData(overlayExist){
+    try{
+        console.log(customerName.value, customerPhone, customerAddress)
+        let data = await apex.server.process("CREATE_NEW_CUSTOMER",{ x01: customerName.value, x02: customerPhone, x03: customerAddress},{dataType: "json"})
+        if (data.status !== "SUCCESS") {
+            apex.message.alert(data.message || "Error saving Customer");
+            return;
+        }else{
+            console.log(data)
+            if(data.customerExist){
+                let overlayConetent = document.getElementById('overlay-content')
+                let customerName = overlayConetent.querySelector('#new-customer-name')
+                const existingError = overlayConetent.querySelector('.err-message');
+                if (existingError) {
+                    existingError.remove();
                 }
-            },
-            error: function (err) {
-            console.error(err);
-            apex.message.alert("Server error while saving line");
-            },
-        });
+                let errorDiv = document.createElement('div')
+                errorDiv.className = 'err-message'
+                errorDiv.textContent = '*Customer Exists'
+                const inputGroup = customerName.closest('.content-row');
+                inputGroup.insertAdjacentElement('afterend', errorDiv);
+                customerName.focus()
+                return 
+            }
+            const parentElement = document.querySelector("#contentWrap01 .form-data .content-wrapper");
+            const option = document.createElement('div');
+            option.classList.add('content-row','d-flex-r','hover-clr-1','cursor-p','p-10','brdr-r-m')
+            option.dataset.value = data.customerID; 
+            option.innerHTML =`
+                            <div class="name flex-1"">${customerName.value}</div>
+                            <div class="flex-1">${customerPhone}</div>
+                            <div class="flex-1">${customerAddress} </div>
+                            `
+            parentElement.appendChild(option);
+            option.addEventListener('click',(e)=>{
+                let row = e.target.closest('.content-row')
+                let customerID  = row.getAttribute('data-value')
+                let customerName  = row.querySelector('.name').textContent
+                document.querySelector('.inv-header .inv-header-wrap .invoice-customer').textContent = `${customerName}`
+                document.querySelector('#sCustomerId').setAttribute('data-value',customerID)
+                let sInvID = document.querySelector('#sInvID').getAttribute('data-value')
+                document.querySelectorAll('.invoices-content .invoice-row').forEach(ele=>{
+                    let invID = ele.getAttribute('data-value')
+                    if(invID ==sInvID){
+                        ele.setAttribute('data-customer', customerName)
+                        ele.querySelector('.customer').textContent= customerName
+                        if(overlayExist)overlayConetent.querySelector('.invCustomerName').textContent= customerName
+                    }
+                })
+                if(overlayExist){removeElementWithID('contentWrap01')
+                }else{removerOverlay()}
+                saveInvoiceHeader(0)
+            })
+            removeElementWithID('contentWrap02')
+        }
+    }catch(err) {
+        console.error(err);
+        apex.message.alert("Server error while saving line");
+        errLog(logFor,'createCustomer() => postCustomerData()',pageID, logFile,err,logShift,logUser)
+    } 
     }
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'createCustomer()[Overlay Form Creation]',pageID, logFile,err,logShift,logUser)
+}
 }
 /* ------------------------ Get Selected Invoice Header Details ------------------------ */
 /* ------------------------ Get Selected Invoice Details ------------------------ */
 function triggerChangedInvoice(){
+try{
     if(!invoiceID){
         invoiceID = 0
-        return
+        // return
     }
     getInvoiceDataDetails()
     renderInvoiceRows();
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'triggerChangedInvoice()',pageID, logFile,err,logShift,logUser)
 }
-function getInvoiceDataDetails(){
-    apex.server.process(
-    'GET_INVOICE_HEADER_DATA',
-    { x01: invoiceID },
-    {
-    dataType: 'json',
-    success: function (data) {
-        if(data.found=='N'){
-            headerSrcDataContainer.querySelector("#sInvDate").setAttribute('data-value',"");
-            headerSrcDataContainer.querySelector("#sInvNo").setAttribute('data-value', '');
-            headerSrcDataContainer.querySelector("#sEmpBranch").setAttribute('data-value',""); 
-            headerSrcDataContainer.querySelector("#sInvType").setAttribute('data-value',"")
-            headerSrcDataContainer.querySelector("#sCustomerId").setAttribute('data-value',"")
-            headerSrcDataContainer.querySelector("#sInvVat").setAttribute('data-value',"")
-            headerSrcDataContainer.querySelector("#sInvPayMethod").setAttribute('data-value',"")
-            headerSrcDataContainer.querySelector("#sInvDiscount").setAttribute('data-value',"")
-            headerSrcDataContainer.querySelector("#sInvSubTotal").setAttribute('data-value',"")
-            headerSrcDataContainer.querySelector("#sInvTaxAmt").setAttribute('data-value', '');
-            headerSrcDataContainer.querySelector("#sInvTotal").setAttribute('data-value', '');
-            headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', '');
+}
+async function getInvoiceDataDetails(){
+if(!openShiftID){openNewShift(); return}
+try{
+    let data = await apex.server.process('GET_INVOICE_HEADER_DATA',{ x01: invoiceID },{dataType: 'json'})
+    if(data.found=='N'){
+        headerSrcDataContainer.querySelector("#sInvDate").setAttribute('data-value',"");
+        headerSrcDataContainer.querySelector("#sInvNo").setAttribute('data-value', '');
+        headerSrcDataContainer.querySelector("#sEmpBranch").setAttribute('data-value',""); 
+        headerSrcDataContainer.querySelector("#sInvType").setAttribute('data-value',"")
+        headerSrcDataContainer.querySelector("#sCustomerId").setAttribute('data-value',"")
+        headerSrcDataContainer.querySelector("#sInvVat").setAttribute('data-value',"")
+        headerSrcDataContainer.querySelector("#sInvPayMethod").setAttribute('data-value',"")
+        headerSrcDataContainer.querySelector("#sInvDiscount").setAttribute('data-value',"")
+        headerSrcDataContainer.querySelector("#sInvSubTotal").setAttribute('data-value',"")
+        headerSrcDataContainer.querySelector("#sInvTaxAmt").setAttribute('data-value', '');
+        headerSrcDataContainer.querySelector("#sInvTotal").setAttribute('data-value', '');
+        headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', '');
 
-            // headerSrcDataContainer.querySelector("#customerIds .li-selected").setAttribute('data-value', '');
-            headerSrcDataContainer.querySelector("#invTaxRates .li-selected").setAttribute('data-value', '');
-            headerSrcDataContainer.querySelector("#invPayMethods .li-selected").setAttribute('data-value', '');
-            // headerSrcDataContainer.querySelector("#customerIds .li-selected").textContent ='';
-            headerSrcDataContainer.querySelector("#invTaxRates .li-selected").textContent ='';
-            headerSrcDataContainer.querySelector("#invPayMethods .li-selected").textContent ='';
-
-            const numbers = document.querySelectorAll('.pos-t-container .numbers .number');
-                numbers[0].querySelector('span:nth-child(2)').textContent = '00.00 LE';
-                numbers[1].querySelector('span:nth-child(1)').textContent = `Tax`;
-                numbers[1].querySelector('span:nth-child(2)').textContent = '00.00 LE';
-                numbers[2].querySelector('span:nth-child(2)').textContent = '00.00 LE';
-
-        }else{
-            let header = data.header
-            const options = {year: 'numeric',month: 'long', day: '2-digit', weekday: 'long'};
-            let invHeaderDate = new Date(header.invDate)
-            headerSrcDataContainer.querySelector("#sInvID").setAttribute('data-value', invoiceID);
-            headerSrcDataContainer.querySelector("#sInvNo").setAttribute('data-value', header.invNo);
-            headerSrcDataContainer.querySelector("#sInvDate").setAttribute('data-value',header.invDate);
-            headerSrcDataContainer.querySelector("#sEmpBranch").setAttribute('data-value',header.invBranch); 
-            headerSrcDataContainer.querySelector("#sInvType").setAttribute('data-value', header.invType)
-            headerSrcDataContainer.querySelector("#sInvVat").setAttribute('data-value',header.invTaxRateValue)
-            headerSrcDataContainer.querySelector("#sInvTaxAmt").setAttribute('data-value', header.invTaxAmt);
-            headerSrcDataContainer.querySelector("#sInvDiscount").setAttribute('data-value',header.discount)
-            headerSrcDataContainer.querySelector("#sInvSubTotal").setAttribute('data-value',header.invTotalLessDiscount)
-            headerSrcDataContainer.querySelector("#sInvTotal").setAttribute('data-value', header.invTotal);
-            headerSrcDataContainer.querySelector("#sInvFinalTotal").setAttribute('data-value', header.invFinalTotal);
-            headerSrcDataContainer.querySelector("#sInvPayMethod").setAttribute('data-value',  header.payMethodID);
-            headerSrcDataContainer.querySelector("#sCustomerId").setAttribute('data-value',header.customerID)
-            headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', header.invTaxID);
-           // headerSrcDataContainer.querySelector("#invDate").value = new Intl.DateTimeFormat('en-US', options).format(invHeaderDate);
-
-            // headerSrcDataContainer.querySelector("#customerIds .li-selected").setAttribute('data-value',header.customerID );
-            const numbers = document.querySelectorAll('.pos-t-container .numbers .number');
-                numbers[0].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invTotal)} LE`;
-                numbers[1].querySelector('span:nth-child(1)').textContent = `Tax (${header.invTaxRateValue}%)`;
-                numbers[1].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invTaxAmt)} LE`;
-                numbers[2].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invFinalTotal)} LE`;
-
-            document.querySelectorAll('.invoices-content .invoice-row').forEach((ele)=>{
-                let invID = ele.getAttribute('data-value')
-                if(!invoiceID){return}
-                if(invID ==invoiceID){
-                    ele.querySelector('.inv-summary').textContent = `${header.invLinesCount} item | ${formatAccounting(header.invFinalTotal)} LE`
-                }
-            })
-        }
-        },
-        error: function (err) {
-            console.error(err);
-        }
+        const numbers = document.querySelectorAll('.pos-t-container .numbers .number');
+            numbers[0].querySelector('span:nth-child(2)').textContent = '00.00 LE';
+            numbers[1].querySelector('span:nth-child(1)').textContent = `Tax`;
+            numbers[1].querySelector('span:nth-child(2)').textContent = '00.00 LE';
+            numbers[2].querySelector('span:nth-child(2)').textContent = '00.00 LE';
+    }else{
+        let header = data.header
+        const options = {year: 'numeric',month: 'long', day: '2-digit', weekday: 'long'};
+        let invHeaderDate = new Date(header.invDate)
+        headerSrcDataContainer.querySelector("#sInvID").setAttribute('data-value', invoiceID);
+        headerSrcDataContainer.querySelector("#sInvNo").setAttribute('data-value', header.invNo);
+        headerSrcDataContainer.querySelector("#sInvDate").setAttribute('data-value',header.invDate);
+        headerSrcDataContainer.querySelector("#sEmpBranch").setAttribute('data-value',header.invBranch); 
+        headerSrcDataContainer.querySelector("#sInvType").setAttribute('data-value', header.invType)
+        headerSrcDataContainer.querySelector("#sInvVat").setAttribute('data-value',header.invTaxRateValue)
+        headerSrcDataContainer.querySelector("#sInvTaxAmt").setAttribute('data-value', header.invTaxAmt);
+        headerSrcDataContainer.querySelector("#sInvDiscount").setAttribute('data-value',header.discount)
+        headerSrcDataContainer.querySelector("#sInvSubTotal").setAttribute('data-value',header.invTotalLessDiscount)
+        headerSrcDataContainer.querySelector("#sInvTotal").setAttribute('data-value', header.invTotal);
+        headerSrcDataContainer.querySelector("#sInvFinalTotal").setAttribute('data-value', header.invFinalTotal);
+        headerSrcDataContainer.querySelector("#sInvPayMethod").setAttribute('data-value',  header.payMethodID);
+        headerSrcDataContainer.querySelector("#sCustomerId").setAttribute('data-value',header.customerID)
+        headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', header.invTaxID);
+        const numbers = document.querySelectorAll('.pos-t-container .numbers .number');
+            numbers[0].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invTotal)} LE`;
+            numbers[1].querySelector('span:nth-child(1)').textContent = `Tax (${header.invTaxRateValue}%)`;
+            numbers[1].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invTaxAmt)} LE`;
+            numbers[2].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invFinalTotal)} LE`;
+        document.querySelectorAll('.invoices-content .invoice-row').forEach((ele)=>{
+            let invID = ele.getAttribute('data-value')
+            if(!invoiceID){return}
+            if(invID ==invoiceID){
+                ele.querySelector('.inv-summary').textContent = `${header.invLinesCount} item | ${formatAccounting(header.invFinalTotal)} LE`
+            }
+        })
     }
-    );
+}catch(err){
+    console.error(err);
+    errLog(logFor,'getInvoiceDataDetails()',pageID, logFile,err,logShift,logUser)
+}
 }
 /* ---- Render invoice rows related to selected invoice */
-function renderInvoiceRows() {
-    $('#pos-table-body').empty();
+async function renderInvoiceRows() {
+    if(!openShiftID){openNewShift(); return}
     let itemsRow = 0
     if (!invoiceID) {
         return;
     }
-    let posItemsContainer = document.querySelector(".pos-t-container")
+    let posItemsContainer = document.querySelector("#pos-container")
     showLoader(posItemsContainer)
-
-    apex.server.process(
-    'GET_INV_LINES',
-    { x01: invoiceID },
-    {
-    dataType: 'json',
-    success: function (data) {
+try{
+        let data = await apex.server.process('GET_INV_LINES',{ x01: invoiceID },{dataType: 'json'})
         if (data.found !== 'Y') {
+            $('#pos-table-body').empty();
             let div = `<div style="text-align: center;">No Data Found</div>`
             $('#pos-table-body').append(div);
             removeLaoder(posItemsContainer)
             return;
         }
+        $('#pos-table-body').empty()
         invoiceLinesItems = []
         data.items.forEach((item, index) => {
                 itemsRow = index + 1
@@ -1096,26 +918,37 @@ function renderInvoiceRows() {
         let soldItems = document.querySelector('.category-row.is-cat-active')
         let selectedCat = soldItems.querySelector('.cat-id')
         if(selectedCat?.textContent ==-1){selectedCat.click();}
-
-    },
-    error: function (err) {
+    }
+    catch(err) {
         console.error(err);
         removeLaoder(posItemsContainer)
-        apex.message.alert('renderInvoiceRows() Server error while fetching items');
+        errLog(logFor,'renderInvoiceRows()',pageID, logFile,err,logShift,logUser)
     }
-    }
-    );
+
 }
-// /*================================================================ */
-// //------------------- Create and Save Invoice
-// /*================================================================*/
+/*================================================================ */
+//------------------- Create and Save Invoice
+/*================================================================*/
 async function createNewInvoice() {
-    apex.message.confirm('Create New Invoice?', async function (ok) {
-        if (!ok) return;
+try{
+    if(!openShiftID){openNewShift(); return}
+    if(invoiceID){
+        invoiceLinesItems = []
+        invoiceID =''
+        $('#pos-table-body').empty()
+        document.querySelector('.inv-header .inv-header-wrap .invoice-h').textContent = `Select Invoice`
+        document.querySelector('.inv-header .inv-header-wrap .invoice-customer').textContent =''
+        getInvoiceDataDetails()
+        fetchOpenInvoices()
+        return;
+    }
+    actionConfirmed = await confirmMsg('Create New Invoice?')
+    if(!actionConfirmed)return;
     try {
-        const headerResult = await apex.server.process("CREATE_NEW_INVOICE", {x01: openShiftID}, {dataType: "json",});
+        const headerResult = await apex.server.process("CREATE_NEW_INVOICE", {x01: openShiftID}, {dataType: "json"});
         if (headerResult.status !== "SUCCESS") {
             apex.message.alert("Error: " + (headerResult.message || "Failed to create invoice"));
+            errLog(logFor,'createNewInvoice()',pageID, logFile,headerResult.message,logShift,logUser)
             return;
         }
         const invNo    = headerResult.inv_no;
@@ -1130,20 +963,23 @@ async function createNewInvoice() {
             const amount = qty * price;
             saveLine(row, qty, price, amount, true)
         });
+        triggerChangedInvoice()
         fetchOpenInvoices();
         successMessage(`Invoice ${invNo} Created Successfully`);
-        } catch (err) {
-            console.error('Invoice creation failed:', err);
-            apex.message.alert(
-                'Failed to create complete invoice: ' + 
-                (err.message)
-            );
-        }
-    });
+    } catch (err) {
+        errLog(logFor,'createNewInvoice()',pageID, logFile,err,logShift,logUser)
+        console.error('Invoice creation failed:', err);
+    }
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'createNewInvoice()',pageID, logFile,err,logShift,logUser)
+}   
 }
 function cashOutInvoice(){
+try{
+    if(!openShiftID){openNewShift(); return}
     if(!invoiceID){
-        errMessage('No Invoice Selected')
+        errMessage('Select Invoice To Proceed')
         return
     }
     createOverlay()
@@ -1158,14 +994,15 @@ function cashOutInvoice(){
     let invDiscount = selectedValues.querySelector("#sInvDiscount").getAttribute("data-value");
 
     let div = document.createElement('div')
-    div.className = 'content-body'
+    div.className = 'content-body-wrap'
+    div.id = 'contentWrap'
     let soldDev = document.createElement('div')
-    soldDev.classList.add('sold-items','sold-items','flow-h','d-flex-c','cntnt-fs','algn-i-c','p-10','gap-10','flex-1')
+    soldDev.classList.add('sold-items','w-100','sold-items','flow-h','d-flex-c','cntnt-fs','algn-i-c','p-10','gap-10','flex-1')
     let soldItems = document.querySelectorAll('#pos-table-body .s-item-row')
     soldItems.forEach(ele => {
         let item = document.createElement('div')
         item.classList.add('item','d-flex-r','gap-10','w-100','cntnt-fs','t-nwrap','algn-i-c')
-        ele.querySelector('.item-img span')?.remove()
+        item.querySelector('.item-img span')?.remove()
         item.innerHTML=`
             ${ele.querySelector('.item-img').outerHTML}
             <div class="d-flex-c gap-5">
@@ -1179,21 +1016,24 @@ function cashOutInvoice(){
             </div>
         `
         soldDev.appendChild(item)
+        item.querySelector('.item-img span')?.remove()
     });
-    let invFooterNumbers = document.querySelector('.pos-t-container .numbers')
     let divPayMethods = document.createElement('div')
-    divPayMethods.classList.add('payMethods','d-flex-r','gap-10')
+    divPayMethods.classList.add('payMethods','d-flex-r','gap-10','d-flx-wrap')
+    divPayMethods.style.cssText = 'margin-top:30px'
     let invPayMethods = document.querySelectorAll('#invPayMethods ul li')
     invPayMethods.forEach(li=>{
         let methodDiv = document.createElement('div');
         methodDiv.dataset.value = li.getAttribute('data-value');
         methodDiv.textContent = li.textContent
+        methodDiv.style.cssText = 'height: 80px;min-width: 100px;flex-grow: 1;'
         if(sInvPayMethod==li.getAttribute('data-value')){methodDiv.classList.add('selected-pay')}
-        methodDiv.classList.add('hover-brdr-btn','bg-clr-3','click-btn','hover-btn','bx-shadow-s','cursor-p','brdr-r-m','t-bold')
+        methodDiv.classList.add('hover-brdr-btn','bg-clr-3','click-btn','hover-btn','bx-shadow-s','cursor-p','brdr-r-m','t-bold','d-flex','algn-i-c','t-nwrap')
         methodDiv.style.cssText='padding: 30px 20px;'
         divPayMethods.appendChild(methodDiv)
     })
     div.innerHTML=`
+            <div class="content-body">
             <div class="form-wrap">
                 <div onclick="removerOverlay()" class="postion-a click-btn d-flex algn-i-c cntnt-c cursor-p t-clr-5" style="right: 10px;top: 7px;">
                     <span class="fa fa-times-circle t-size-5 t-clr-9" aria-hidden="true"></span>
@@ -1201,12 +1041,12 @@ function cashOutInvoice(){
                 <div class="form-title">Payment</div>
                 <div class="form-data" style="margin:0">
                     <div class="content-wrapper d-flex-r cntnt-sb gap-20">
-                        <div class="flex-1 d-flex-c" style="margin: 50px 0 0;">
-                            <div class="d-flex gap-10 w-100 cntnt-c algn-i-c p-10 brdr-r-m bx-shadow-s">
+                        <div class="d-flex-c cntnt-c algn-i-c" style="margin: 50px 0 0;">
+                            <div class="d-flex gap-10 w-100 cntnt-c algn-i-c p-10 brdr-r-m bx-shadow-s" style="width: 450px;">
                                 <div class="p-10 h-100 brdr-r-m t-clr-3 bg-clr-5">CN</div>
-                                <div class="cursor-p">
+                                <div class="cursor-p" onclick="openCustomersPage()">
                                     <div class="d-flex gap-10 t-size-m algn-i-c">
-                                        <div class="t-bold">${customerName}</div>
+                                        <div class="t-bold invCustomerName">${customerName}</div>
                                         <!--<span class="fa fa-refresh" aria-hidden="true"></span>-->
                                     </div>
                                     <div>#${invoiceNo}</div>
@@ -1214,69 +1054,69 @@ function cashOutInvoice(){
                                 <div class="flex-1 t-algn-r">${invDateValue}</div>
                             </div>
                             ${soldDev.outerHTML}
-                            <div class="invoice amounts d-flex-c cntnt-c algn-i-c w-100 gap-10 p-20" style="align-self: flex-end;">
-                                ${invFooterNumbers.outerHTML}
-                                <!--<div class="d-flex w-100 gap-10">
-                                    <div>Items</div><div class="flex-1 t-algn-r">${formatAccounting(invTotal)}</div>
-                                </div>
-                                <div class="d-flex w-100 gap-10">
-                                    <div>Tax(14%)</div><div class="flex-1 t-algn-r">${formatAccounting(invTaxAmt)}</div>
-                                </div>
-                                <div class="d-flex w-100 gap-10 mar-20">
-                                    <div>Total</div><div class="flex-1 t-algn-r">${formatAccounting(invFinalTotal)}</div>
-                                </div> -->
-                            </div>
                         </div>
-                        <div class="cash-inputs d-flex-c bg-clr-3 bx-shadow-s brdr-r-m p-10 cntnt-sa">
+                        <div class="cash-inputs d-flex-c bg-clr-1 bx-shadow-s brdr-r-m p-10 cntnt-sa">
                             ${divPayMethods.outerHTML}
                             <div class="inputNumbers d-flex-c gap-10">
-                                <div class="d-flex-c gap-5">
-                                    <div class="inputGroup brdr-r-m p-10 t-bold t-algn-c" style="margin: 0 10px;">
-                                        <label for="cashamount" class="t-clr-5">Discount</label>
-                                        ${!discountAccess?  
-                                            `<div class="input">${formatAccounting(invDiscount)}</div>`:
-                                            `<input class="input" required="" autocomplete="off" type="number" 
-                                            value=${formatAccounting(invDiscount)}>`
-                                        }
-                                        
-                                    </div>
-                                    <div class="inputGroup brdr-r-m p-10 t-bold t-algn-c" style="margin: 0 10px;">
-                                        <label for="cashamount" class="t-clr-5">Remaning</label>
-                                        <div class="remaning input brdr-r-m p-10 t-bold t-algn-c">
-                                            ${formatAccounting(0)}
-                                        </div>
-                                    </div>                                        
-                                    <div class="inputGroup brdr-r-m p-10 t-bold t-algn-c" style="margin: 0 10px;">
-                                        <label for="cashamount" class="t-clr-5">Paid</label>
-                                        <div class="enteredAmt input brdr-r-m p-10 t-bold t-algn-c">
-                                            ${invFinalTotal}
-                                        </div>
-                                    </div>     
+                                <div class="inputGroup brdr-r-m p-10 t-bold t-algn-c" >
+                                    <label for="cashamount" class="t-clr-5">Discount</label>
+                                    ${!discountAccess?  
+                                        `<div class="input t-algn-c" id="invDiscount">${invDiscount}</div>`:
+                                        `<div class="item-c backspaceBtn" style="right: 12px;"><span class="fa fa-box-arrow-in-west" aria-hidden="true"></span></div>
+                                        <input class="input t-algn-c" id="invDiscount" required="" autocomplete="off" type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*"
+                                        value=${invDiscount}>`
+                                    }
+                                    
                                 </div>
+                                <div class="inputGroup brdr-r-m p-10 t-bold t-algn-c postion-r" >
+                                    <div class="item-c backspaceBtn" style="right: 12px;"><span class="fa fa-box-arrow-in-west" aria-hidden="true"></span></div>
+                                    <label for="cashamount" class="t-clr-5">Paid</label>
+                                    <input class="input t-algn-c" id="enteredAmt" required="" pattern="[0-9]*\.?[0-9]*"
+                                        autocomplete="off" type="text"  inputmode="decimal"
+                                        value=0>
+                                </div>     
                                 <div class="d-grid cntnt-sa algn-i-c gap-10" style="grid-template-columns: repeat(3, 1fr);grid-template-rows: repeat(3, auto);gap: 10px;">
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">1</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">2</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">3</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">4</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">5</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">6</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">7</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">8</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">9</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">.</div>
-                                    <div class="number click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">0</div>
-                                    <div class="dNumber click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">1</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">2</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">3</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">4</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">5</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">6</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">7</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">8</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">9</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">.</div>
+                                    <div class="numKey bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">0</div>
+                                    <div class="deleteNumber bg-clr-3 click-btn hover-btn d-flex algn-i-c cntnt-c" style="height:50px">
                                         <span class="fa fa-remove" aria-hidden="true"></span>
+                                    </div>
+                                </div>
+                                <div class="d-flex-c gap-5">
+                                    <div class="invoice amounts">
+                                        <div class="numbers d-flex-c gap-10 p-10 bg-clr-1 w-100 postion-r brdr-r-m flow-h" style="padding: 0 10px;">
+                                            <div class="d-flex-c gap-10 t-size-m">
+                                                <div class="amt d-flex cntnt-sb algn-i-c"><span>Sub-Total</span><span>${formatAccounting(invTotal)} LE</span></div>
+                                                <div class="amt d-flex cntnt-sb algn-i-c"><span>Tax (14%)</span><span>${formatAccounting(invTaxAmt)} LE</span></div>
+                                                <div class="amt d-flex cntnt-sb algn-i-c"><span>Discount</span><span class="discountAmt">00.00 LE</span></div>
+                                                <div class="amt d-flex cntnt-sb algn-i-c"><span>Remaning</span><span class="remaning">00.00 LE</span></div>
+                                            </div>
+                                            <div class="postion-r">
+                                                <div style="display: flex;align-items: center;justify-content: space-between;" class="numbers t-bold t-size-m d-flex cntnt-sb algn-i-c">
+                                                    <span>Total</span><span>${formatAccounting(invFinalTotal)} LE</span>
+                                                </div>
+                                                <div style="position: absolute;width: 89%;height: 1px;border: 1px dashed #00000070;left: 25px;top: -4px;"></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="btns-wrap d-flex gap-10 w-100 cntnt-c brdr-r-m">
-                                <button type="button" class="btn-style-brdr w-100" id="btn-cash-Invoice">Cash Out</button>
+                                <button type="button" class="btn-style w-100" id="btn-cash-Invoice">Cash Out</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>`
+            </div></div>`
 
     overlayConetent.appendChild(div)
     let methodsDiv = overlayConetent.querySelectorAll('.payMethods div')
@@ -1290,41 +1130,77 @@ function cashOutInvoice(){
             })    
         })
 
-
-    let numberBtns = overlayConetent.querySelectorAll('.inputNumbers .number')
-    let enteredAmt = overlayConetent.querySelector('.enteredAmt')
+    let numberBtns = overlayConetent.querySelectorAll('.inputNumbers .numKey')
+    let paidInput = overlayConetent.querySelector('#enteredAmt')
     let remaning = overlayConetent.querySelector('.remaning')
-    let deleteNumber = overlayConetent.querySelector('.dNumber')
-    numberBtns.forEach((ele)=>{
-        ele.addEventListener('click',()=>{
-            let enteredAmtValue = enteredAmt?.textContent.trim().replace(/,/g, '')
-            let eleValue = ele?.textContent.trim()
-            if(eleValue =='.'){
-                if(enteredAmtValue.includes('.')){return}
-                enteredAmt.textContent = enteredAmtValue + eleValue;
-                return;
-            }
-            let amt = enteredAmtValue + ele.textContent;
-            enteredAmtValue = amt.replace(/,/g, '')
-            enteredAmt.textContent = enteredAmtValue
-            let remaningAmt = invFinalTotal - enteredAmtValue
-                remaning.textContent = formatAccounting(remaningAmt)
+    let discountInput = overlayConetent.querySelector('#invDiscount')
+    let deleteNumber = overlayConetent.querySelector('.deleteNumber')
+    let backspaceBtn = overlayConetent.querySelectorAll('.backspaceBtn')
+    let activeInput = null;
+    overlayConetent.querySelectorAll('input').forEach(input => {
+        input.addEventListener('focus', () => {
+            activeInput = input;
+        })
+    });
+    function calcRemaning(){
+        let paidAmt = paidInput?.value.trim().replace(/,/g, '')  || 0
+        let discountAmt = discountInput?.value.trim().replace(/,/g, '')  || 0
+        let remaningAmt = paidAmt - (invFinalTotal -discountAmt)
+            remaning.textContent = `${formatAccounting(remaningAmt)} LE`
+        overlayConetent.querySelector('.discountAmt').textContent = `${formatAccounting(discountAmt)} LE`
+    }
+    backspaceBtn.forEach(field=>{
+        field.addEventListener('click',(e)=>{
+            let div = e.target.closest('.inputGroup')
+            activeInput = div.querySelector('input') 
+            activeInput.focus()
+            if(activeInput.value=='' ){return}
+            activeInput.value = activeInput.value.slice(0, -1)
+            discountInput.dispatchEvent(new Event('keyup'));
+            paidInput.dispatchEvent(new Event('keyup'));
         })
     })
+    numberBtns.forEach((key)=>{
+        key.addEventListener('click',()=>{
+            if (!activeInput)return;
+            let activeInputVal = activeInput?.value.trim().replace(/,/g, '')  
+            let keyValue = key?.textContent.trim()
+            if(keyValue =='.'){
+                if(activeInputVal.includes('.')){return}
+                activeInput.value += keyValue;
+                return;
+            }
+            let amt = activeInputVal + keyValue;
+            activeInputVal = amt.replace(/,/g, '')
+            activeInput.value = parseFloat(activeInputVal)
+            discountInput.dispatchEvent(new Event('keyup'));
+            paidInput.dispatchEvent(new Event('keyup'));
+            activeInput.focus()
+        })
+    })
+    discountInput.addEventListener('keyup',()=>{calcRemaning()})
+    paidInput.addEventListener('keyup',()=>{calcRemaning()})
     deleteNumber.addEventListener('click',()=>{
-        enteredAmt.textContent=''
-        remaning.textContent = formatAccounting(invFinalTotal)
+        if (!activeInput)return;
+        activeInput.value=0
+        calcRemaning()
     })
     overlayConetent.querySelector('#btn-cash-Invoice').addEventListener('click', ()=> {
         saveInvoiceHeader(1);
     });
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'cashOutInvoice()',pageID, logFile,err,logShift,logUser)
+} 
 }
-function saveInvoiceHeader(invClosed){
+async function saveInvoiceHeader(invClosed){
+try{
+    if(!openShiftID){openNewShift(); return}
     if(!invoiceID){
         errMessage('No Invoice Selected')
         return
     }
-    let invDiscount, invTaxID, payMethodID
+    let invDiscount, payMethodID
     let invoiceNo =headerSrcDataContainer.querySelector("#sInvNo").getAttribute('data-value');
     let overlayConetent = document.querySelector('#overlay-content')
     let empBranch = selectedValues.querySelector("#sEmpBranch").getAttribute("data-value");
@@ -1332,14 +1208,13 @@ function saveInvoiceHeader(invClosed){
     let invDate = selectedValues.querySelector("#sInvDate").getAttribute("data-value");
     let invPayment = selectedValues.querySelector("#sInvFinalTotal").getAttribute("data-value");
     let customerID = selectedValues.querySelector("#sCustomerId").getAttribute("data-value");
+    let invTaxID = selectedValues.querySelector("#sTaxRateID").getAttribute("data-value");
 
     if(overlayConetent){
         invDiscount = overlayConetent.querySelector("#invDiscount").value ;
-        invTaxID = overlayConetent.querySelector("#invTaxRatesCash .li-selected").getAttribute("data-value");
-        payMethodID = overlayConetent.querySelector("#invPayMethodsCash .li-selected").getAttribute("data-value");
+        payMethodID = overlayConetent.querySelector(".payMethods .selected-pay").getAttribute("data-value");
     }else{
         invDiscount = selectedValues.querySelector("#sInvDiscount").getAttribute("data-value");
-        invTaxID = selectedValues.querySelector("#sTaxRateID").getAttribute("data-value");
         payMethodID = selectedValues.querySelector("#sInvPayMethod").getAttribute("data-value");
     }
 
@@ -1347,49 +1222,45 @@ function saveInvoiceHeader(invClosed){
         errMessage('Invoice Header Must be Completed for Saving')
         return;
     }
-    apex.server.process(
-        "SAVE_INV_HEADER_DATA",
-        {
-            x01: invoiceID,
-            x02: customerID,
-            x03: payMethodID,
-            x04: invDate,
-            x05: empBranch,
-            x06: invType,
-            x07: invTaxID, 
-            x08: invClosed,
-            x09: parseFloat(invDiscount.replace(/,/g, '')),
-            x10: parseFloat(invPayment.replace(/,/g, '')),
-        },
-        {
-            dataType: "json",
-            success: function (data) {
-                if (data.status !== "SUCCESS") {
-                    apex.message.alert(data.message || "Error saving invoice");
-                    return;
-                }
-                if(invClosed ==1){
-                    invoiceID =''
-                    $('#pos-table-body').empty()
-                    document.querySelector('.inv-header .inv-header-wrap .invoice-h').textContent = `No Invoice Selected`
-                    document.querySelector('.inv-header .inv-header-wrap .invoice-customer').textContent =''
-                    removerOverlay()
-                    triggerChangedInvoice()
-                    fetchOpenInvoices()
-                    successMessage(`Invoice ${invoiceNo} Closed Successfully`)
-                }
-            },
-            error: function (err) {
-                console.error(err);
-                apex.message.alert("Server error while saving line");
-            },
+    try{
+        let res = await apex.server.process('SAVE_INV_HEADER_DATA',{
+            x01: invoiceID, x02: customerID, x03: payMethodID, x04: invDate, 
+            x05: empBranch, x06: invType, x07: invTaxID,  x08: invClosed, 
+            x09: parseFloat(invDiscount.replace(/,/g, '')), x10: parseFloat(invPayment.replace(/,/g, ''))
+        },{dataType:"json"})
+        if (res.status !== "SUCCESS") {
+            errLog(logFor,`saveInvoiceHeader(${invClosed})`,pageID, logFile,res.message,logShift,logUser)
+            apex.message.alert(res.message || "Error saving invoice");
+            return;
         }
-    );
+        if(invClosed ==1){
+            invoiceLinesItems = []
+            invoiceID =''
+            $('#pos-table-body').empty()
+            document.querySelector('.inv-header .inv-header-wrap .invoice-h').textContent = `Select Invoice`
+            document.querySelector('.inv-header .inv-header-wrap .invoice-customer').textContent =''
+            removerOverlay()
+            triggerChangedInvoice()
+            fetchOpenInvoices()
+            successMessage(`Invoice ${invoiceNo} Saved`)
+        }
+    }
+    catch(err){
+        console.error(err);
+        apex.message.alert("Server error while saving line");
+        errLog(logFor,`saveInvoiceHeader(${invClosed}) => PostData`,pageID, logFile,err,logShift,logUser)
+    }
+}catch(err){
+    console.log('Err', err)
+    errLog(logFor,'saveInvoiceHeader()=> Data Capture',pageID, logFile,err,logShift,logUser)
+} 
 }
 /*================================================================ */
 //------------------- Open and Close Shifts
 /*================================================================*/
 function closeOpenShift(){
+try{
+    if(!openShiftID){openNewShift(); return}
     let invoicesCount = document.querySelectorAll(".invoices-content .invoice-row").length
     console.log(`Open Invoices: ${invoicesCount}`)
     if(invoicesCount != 0 ){
@@ -1399,9 +1270,11 @@ function closeOpenShift(){
     createOverlay()
     let overlayConetent = document.getElementById('overlay-content')
     let div = document.createElement('div')
-    div.className = 'content-body'
+    div.id = 'contentWrap'
+    div.className = 'content-body-wrap'
     div.innerHTML=`
-            <div class="form-wrap" style="width:30vw;">
+            <div class="content-body" style="width: 400px;height: auto">
+            <div class="form-wrap">
                 <div class="form-title">Close Shift</div>
                 <div class="form-data">
                     <div class="content-wrapper">
@@ -1410,60 +1283,55 @@ function closeOpenShift(){
                             <label for="cashamount">Cashier Amount</label>
                         </div>
                     </div>
-                    <div class="btns-wrap d-flex gap-10 w-100 ontent-c">
+                    <div class="btns-wrap d-flex gap-10 w-100 cntnt-c">
                         <button type="button" class="btn-style" id="btn-close-shift">Close Shift</button>
                         <button type="button" class="btn-style" onclick="removerOverlay()" >Cancel</button>
                     </div>
                 </div>
-            </div>`
+            </div></div>`
     overlayConetent.appendChild(div)
 
     overlayConetent.querySelector('#btn-close-shift').addEventListener('click', ()=>{closeShift()});
-    function closeShift(){
-        let overlayConetent = document.getElementById('overlay-content');
-        let shiftAmount = overlayConetent.querySelector('input[type="number"]').value;
-        if(!shiftAmount){
-            const existingError = overlayConetent.querySelector('.err-message');
-            const shiftEle = overlayConetent.querySelector('.inputGroup');
-            if (existingError) {
-                existingError.remove();
-            }
-            let errorDiv = document.createElement('div')
-            errorDiv.className = 'err-message'
-            errorDiv.textContent = '*You Must Enter a Number'
-            shiftEle.parentNode.insertBefore(errorDiv, shiftEle.nextSibling);
-            return 
-        };
-        shiftAmount = String(shiftAmount).replace(/,/g, '')
-        apex.server.process(
-            "CLOSE_OPEN_SHIFT",
-            {
-                x01: openShiftID,
-                x02: shiftAmount,
-            },
-            {
-            dataType: "json",
-            success: function (data) {
-                if (data.status !== "SUCCESS") {
-                    removerOverlay()
-                    apex.message.alert(data.message || "Error Closing Shift");
-                    return;
+    async function closeShift(){
+        try{
+            let overlayConetent = document.getElementById('overlay-content');
+            let shiftAmount = overlayConetent.querySelector('input[type="number"]').value;
+            if(!shiftAmount){
+                const existingError = overlayConetent.querySelector('.err-message');
+                const shiftEle = overlayConetent.querySelector('.inputGroup');
+                if (existingError) {
+                    existingError.remove();
                 }
-                openShiftID=''
+                let errorDiv = document.createElement('div')
+                errorDiv.className = 'err-message'
+                errorDiv.textContent = '*You Must Enter a Number'
+                shiftEle.parentNode.insertBefore(errorDiv, shiftEle.nextSibling);
+                return 
+            };
+            shiftAmount = String(shiftAmount).replace(/,/g, '')
+            let data = await apex.server.process("CLOSE_OPEN_SHIFT",{x01: openShiftID,x02: shiftAmount,},{dataType: "json"})
+            if (data.status !== "SUCCESS") {
                 removerOverlay()
-                successMessage(`Shift Closed Successfully`)
-                getOpenShift()
-            },
-            error: function (err) {
-                removerOverlay()
-                console.error(err);
-                apex.message.alert("Server error while saving line");
-            },
+                apex.message.alert(data.message || "Error Closing Shift");
+                return;
             }
-        );
+            openShiftID=''
+            removerOverlay()
+            successMessage(`Shift Closed Successfully`)
+            getOpenShift()
+        }catch(err){
+            console.error('Err', err)
+            removerOverlay()
+            errLog(logFor,'closeOpenShift() => closeShift()',pageID, logFile,err,logShift,logUser)
+        }
     }
+}catch(err){
+    console.error('Err', err)
+    errLog(logFor,'closeOpenShift()',pageID, logFile,err,logShift,logUser)
+}
 }
 function openNewShift(){
+try{
     if(openShiftID){
         errMessage(`Close Open Shift First`)
         return
@@ -1471,8 +1339,10 @@ function openNewShift(){
     createOverlay()
     let overlayConetent = document.getElementById('overlay-content')
     let div = document.createElement('div')
-    div.className = 'content-body'
+    div.id = 'contentWrap'
+    div.className = 'content-body-wrap'
     div.innerHTML=`
+            <div class="content-body" style="width: 400px;height: auto">
             <div class="form-wrap">
                 <div class="form-title">Open Shift</div>
                 <div class="form-data">
@@ -1482,140 +1352,47 @@ function openNewShift(){
                             <label for="cashamount">Cashier Amount</label>
                         </div>
                     </div>
-                    <div class="btns-wrap d-flex gap-10 w-100 ontent-c">
+                    <div class="btns-wrap d-flex gap-10 w-100 cntnt-c">
                         <button type="button" class="btn-style" id="btn-open-shift">Open Shift</button>
                     </div>
                 </div>
+            </div>
             </div>`
     overlayConetent.appendChild(div)
-    overlayConetent.querySelector('#btn-open-shift').addEventListener('click', openShift);
-    function openShift(){
+    overlayConetent.querySelector('#btn-open-shift').addEventListener('click', ()=>{openShift()});
+    const openShift = async ()=>{
         let shiftAmount = overlayConetent.querySelector('input[type="number"]').value;
         if(!shiftAmount){return};
         shiftAmount = String(shiftAmount).replace(/,/g, '')
-        apex.server.process(
-            "OPEN_NEW_SHIFT",
-            {
-                x01: shiftAmount,
-            },
-            {
-            dataType: "json",
-            success: function (data) {
-                if (data.status !== "SUCCESS") {
-                    removerOverlay()
-                    apex.message.alert(data.message || "Error Opening Shift");
-                    return;
-                }
-                triggerChangedInvoice()
-                getOpenShift()
+        try{
+            let data = await apex.server.process("OPEN_NEW_SHIFT",{x01: shiftAmount,},{dataType: "json"})
+            if (data.status !== "SUCCESS") {
                 removerOverlay()
-                successMessage(`Shift Opened Successfully`)
-            },
-            error: function (err) {
-                removerOverlay()
-                console.error(err);
-                apex.message.alert("Server error while saving line");
-            },
+                apex.message.alert(data.message || "Error Opening Shift");
+                return;
             }
-        );
-    }
-}
-function createCashEnrty(){
-    createOverlay()
-    let posOverlay = document.getElementById('overlay-container');
-        posOverlay.style.backgroundColor = '#00000040'
-    let overlayConetent = document.querySelector('#overlay-content')
-    let div = document.createElement('div')
-    div.className = 'content-body'
-    div.id = 'content-body'
-    div.innerHTML=`
-        <div class="form-wrap" style="width:40vw">
-            <div class="form-title">Create Cash Entry</div>
-            <div class="form-data">
-                <div class="content-wrapper">
-                    <div class="content-row d-flex gap-10 algn-i-c">
-                        <div class="inputGroup">
-                            <label for="cashamount">Entry Type</label>
-                            <div id="selectCashEntryType" class="ul-select-wrapper input" style="position: relative;">
-                                <div class="li-selected" data-value="cash out">Cash Out</div>
-                                <div class="dropdown-list" style="position: absolute;">
-                                    <input placeholder="Search..." type="text" class="dropdown-menu-search">
-                                    <ul class="ul-dropdown-inner">
-                                        <li value="0" data-value="cash out">Cash Out</li>
-                                        <li value="0" data-value="cash In">Cash In</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="inputGroup">
-                            <input class="input" required="" autocomplete="off" type="number" >
-                            <label for="cashamount">Amount</label>
-                        </div>
-                    </div>
-                    <div class="content-row d-flex gap-10 algn-i-c">
-                        <div class="inputGroup">
-                            <input class="input" required="" autocomplete="off" type="text" id="entryDescription">
-                            <label for="cashamount">Description</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="btns-wrap d-flex gap-10 w-100 ontent-c">
-                    <button type="button" class="btn-style" id="createCashEntry">Create</button>
-                    <button type="button" class="btn-style" onclick="removerOverlay()">Cancel</button>
-                </div>
-            </div>
-        </div>`
-    overlayConetent.appendChild(div)
-    const parentElement = overlayConetent.querySelector("#selectCashEntryType");
-    setupCustomDropdown(parentElement)
-
-    overlayConetent.querySelector('#createCashEntry').addEventListener('click', postCashEntry);
-    function postCashEntry(){
-        let type = overlayConetent.querySelector('#selectCashEntryType .li-selected').getAttribute('data-value');
-        let amount = overlayConetent.querySelector('input[type="number"]').value;
-        let description = overlayConetent.querySelector('#entryDescription').value;
-        if(!type || !amount || !description){
-            const existingError = overlayConetent.querySelector('.err-message');
-            const shiftEle = overlayConetent.querySelector('.inputs');
-            if (existingError) {
-                existingError.remove();
-            }
-            let errorDiv = document.createElement('div')
-            errorDiv.className = 'err-message'
-            errorDiv.textContent = '**You Must Enter a Value for All Fields'
-            shiftEle.parentNode.insertBefore(errorDiv, shiftEle.nextSibling);
-            return 
-        };
-        apex.server.process(
-        "CREATE_CASH_ENTRY",
-        {
-            x01: openShiftID,
-            x02: type,
-            x03: amount,
-            x04: description
-        },
-        {
-            dataType: "json",
-            success: function (data) {
-                if(data.status =='SUCCESS'){
-                    successMessage(`Entry ${data.entryNo} Created Successfully`)
-                    removerOverlay()
-                }
-            },
-            error: function (err) {
+            openShiftID=data.shiftID
+            removerOverlay()
+            triggerChangedInvoice()
+            getOpenShift()
+            successMessage(`Shift Opened Successfully`)
+        }catch(err) {
             removerOverlay()
             console.error(err);
-            apex.message.alert("Server error while saving line");
-            },
-        });
+            errLog(logFor,'openNewShift() => openShift()',pageID, logFile,err,logShift,logUser)
+        }
     }
-
+}catch(err){
+    console.error('Err', err)
+    errLog(logFor,'openNewShift()',pageID, logFile,err,logShift,logUser)
+}
 }
 /* ------------------------ Append Item to sales table ------------------------ */
 let itemFound = false;
 let existingRow = null;
 let lastPromise = Promise.resolve();
 $(document).on("click", ".item-row",function(event) {
+    if(!openShiftID){openNewShift(); return}
     const clickedRow = event.target.closest('.item-row');
     if (!clickedRow) return;
     lastPromise = lastPromise.finally(async () => {
@@ -1663,11 +1440,11 @@ async function handleItemClick(clickedRow) {
         }
         // ── Add new row ─────────────────────────────────────────────────────
         const itemsRowCount = $("#pos-table-body .s-item-row").length; 
+        if(itemsRowCount==0){$('#pos-table-body').empty();}
         invoiceLinesItems.push(itemID)
         let newRowHtml = document.createElement('div')
-        newRowHtml.classList.add('s-item-row')
+        newRowHtml.classList.add('s-item-row','s-item-row','d-flex','gap-10','p-10','bg-clr-3')
         newRowHtml.innerHTML = `
-                <div class="s-item-row d-flex gap-10 p-10 bg-clr-3">
                     <div class="inv-line-id" style="display: none;"></div>
                     <div class="inv-id" style="display: none;">invoiceID</div>
                     <div class="item-id" style="display: none;">${itemID}</div>
@@ -1676,7 +1453,6 @@ async function handleItemClick(clickedRow) {
                     <div style="display: none;" class="price">${formatAccounting(itemPrice)}</div>
                     <div style="display: none;" class="uom">${itemUOM}</div>
                     <div style="display: none;" class="amount">${formatAccounting(itemPrice)}</div>
-                    
                     <div class="item-img d-flex cntnt-c algn-i-c">
                         <div class="img-holder flow-h postion-r brdr-r-m d-flex cntnt-c algn-i-c bx-shadow-s">
                             <span style="position:absolute;" aria-hidden="true" class="fa fa-trash"></span>
@@ -1696,13 +1472,13 @@ async function handleItemClick(clickedRow) {
                             </div>
                             <div class="amount">${formatAccounting(itemPrice)} LE</div>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
         posTableLines(newRowHtml, 1);
         // getInvoiceDataDetails();
         // fetchOpenInvoices();
     } catch (err) {
         console.error("Error in handleItemClick:", err);
+        errLog(logFor,'handleItemClick()',pageID, logFile,err,logShift,logUser)
     } finally {
         clickedRow.style.opacity = '';
         clickedRow.style.pointerEvents = '';
@@ -1718,10 +1494,8 @@ async function handleItemClick(clickedRow) {
         row.querySelectorAll(".amount").forEach(ele=>ele.textContent=formatAccounting(amount.toFixed(2)));
         if (invoiceID) {
             if(invLineID){
-                console.log(`invoiceID: ${invoiceID}`)
                 updateLine(itemID, qty, price, amount, invLineID);
             }else {
-                console.log(`invoiceID: ${invoiceID}`)
                 saveLine(row, 1, price, price, false);
             }
         }
@@ -1737,71 +1511,60 @@ async function handleItemClick(clickedRow) {
     }
 }
 /* ------------------------ Save Line to DB ------------------------ */
-function saveLine(row, qty, price, amount, newInv) {
+async function saveLine(row, qty, price, amount, newInv) {
+try{
+    if(!openShiftID){openNewShift(); return}
     var itemID = row.querySelector(".item-id").textContent;
     let invType = ''
     let lineType = invType =='Return Invoice' ? 'RI' :'SI'
-    apex.server.process(
-        "ADD_INV_LINE_TO_DB",
-        {x01: itemID,x02: qty,x03: price,x04: amount,x05: invoiceID,x06: lineType},
-        {
-            dataType: "json",
-            success: function (data) {
-                if (data.status !== "SUCCESS") {
-                    apex.message.alert(data.message || "Error saving line");
-                    return;
-                }
-                let invLineID = data.l_inv_line_id;
-                row.querySelector(".inv-line-id").textContent = invLineID
-                if(!newInv){
-                    document.querySelector('#pos-table-body').appendChild(row);
-                    getInvoiceDataDetails()
-                }
-                if(newInv){
-                    row.querySelector(".inv-id").textContent = invoiceID
-                }
-            },
-            error: function (err) {
-                console.error(err);
-                apex.message.alert("Server error while saving line");
-            },
-        }
-    );
+    let data = await apex.server.process("ADD_INV_LINE_TO_DB",{x01: itemID,x02: qty,x03: price,x04: amount,x05: invoiceID,x06: lineType},{dataType: "json"})
+    if (data.status !== "SUCCESS") {
+        apex.message.alert(data.message || "Error saving line");
+        errLog(logFor,'saveLine()',pageID, logFile,err,logShift,logUser)
+        return;
+    }
+    let invLineID = data.l_inv_line_id;
+    row.querySelector(".inv-line-id").textContent = invLineID
+    if(!newInv){
+        document.querySelector('#pos-table-body').appendChild(row);
+        getInvoiceDataDetails()
+    }
+    if(newInv){
+        row.querySelector(".inv-id").textContent = invoiceID
+    }
+
+}catch(err){
+    console.error('Err', err)
+    errLog(logFor,'saveLine()',pageID, logFile,err,logShift,logUser)
+}
 }
 /* ------------------------ Update DB Line ------------------------- */
-function updateLine(itemID, qty, price, amount, invLineID) {
-    apex.server.process(
-        "UPDATE_INV_LINE",
-        {x01: itemID,x02: qty,x03: price,x04: amount,x05: invLineID,},
-        {
-            dataType: "json",
-            success: function (data) {
-            if (data.status !== "SUCCESS") {
-                apex.message.alert(data.message || "Error saving line");
-                return;
-            }
-            getInvoiceDataDetails()
-            },
-            error: function (err) {
-            console.error(err);
-            apex.message.alert("Server error while saving line");
-            },
-        }
-    );
+async function updateLine(itemID, qty, price, amount, invLineID) {
+try{
+    if(!openShiftID){openNewShift(); return}
+    let data = await apex.server.process("UPDATE_INV_LINE",{x01: itemID,x02: qty,x03: price,x04: amount,x05: invLineID},{dataType: "json"})
+    if (data.status !== "SUCCESS") {
+        apex.message.alert(data.message || "Error saving line");
+        errLog(logFor,'updateLine()',pageID, logFile,err,logShift,logUser)
+        return;
+    }
+    getInvoiceDataDetails()
+}catch(err){
+    console.error('Err', err)
+    errLog(logFor,'updateLine()',pageID, logFile,err,logShift,logUser)
+}
 }
 /* ------------------------ Delete Line ------------------------ */
-function deleteLine(lineId) {
+async function deleteLine(lineId) {
+try{
+    if(!openShiftID){openNewShift(); return}
     if (!lineId) return;
-    apex.server.process(
-        "DELETE_INV_LINE",
-        { x01: lineId },
-        {
-            dataType: "json",
-            success: function () {
-                getInvoiceDataDetails()
-            },
-        }
-    );
+    await apex.server.process("DELETE_INV_LINE",{ x01: lineId },{dataType: "json"})
+    getInvoiceDataDetails()
+}catch(err){
+    console.error('Err', err)
+    errLog(logFor,'deleteLine()',pageID, logFile,err,logShift,logUser)
+}
 };
 /*================================================================ */
 //------------------- Document Elements Events
@@ -1814,6 +1577,7 @@ $(document).on("click", "#navigationBarMenueClose", () => {
 });
 // Invoice Rows Evenets Qty Increase and Decrease - Delete Line 
 $(document).on("click", ".s-item-row .qty-row .qty-plus", (e) => {
+    if(!openShiftID){openNewShift(); return}
     const itemRow = e.target.closest('.s-item-row');
     const lineId = itemRow.querySelector('.inv-line-id')?.textContent;
     const priceText = itemRow.querySelector('.price')?.textContent.replace('LE','').trim();
@@ -1834,6 +1598,7 @@ $(document).on("click", ".s-item-row .qty-row .qty-plus", (e) => {
     updateLine(itemID, newQty, price, newAmount, lineId)
 });
 $(document).on("click", ".s-item-row .qty-row .qty-less", (e) => {
+    if(!openShiftID){openNewShift(); return}
     const itemRow = e.target.closest('.s-item-row');
     const lineId = itemRow.querySelector('.inv-line-id')?.textContent;
     const priceText = itemRow.querySelector('.price')?.textContent.replace('LE','').trim();
@@ -1853,6 +1618,7 @@ $(document).on("click", ".s-item-row .qty-row .qty-less", (e) => {
     updateLine(itemID, newQty, price, newAmount, lineId)
 });
 $(document).on("click", ".s-item-row .img-holder .fa.fa-trash", (e) => {
+    if(!openShiftID){openNewShift(); return}
     const itemRow = e.target.closest('.s-item-row');
     const lineId = itemRow.querySelector('.inv-line-id')?.textContent;
     const itemID = itemRow.querySelector('.item-id')?.textContent;
@@ -1861,7 +1627,10 @@ $(document).on("click", ".s-item-row .img-holder .fa.fa-trash", (e) => {
             invoiceLinesItems.splice(i, 1);
         }
     }
-    if (!lineId) return;
+    if (!lineId) {
+        itemRow.remove()
+        return
+    };
     apex.message.confirm("Delete this line?", function (ok) {
         if (!ok) return;
         deleteLine(lineId) 
@@ -1870,101 +1639,6 @@ $(document).on("click", ".s-item-row .img-holder .fa.fa-trash", (e) => {
 });
 /*------------- Open Customers Page  */
 $(document).on("click", ".inv-header-wrap .invoice-customer", ()=> {
+    if(!openShiftID){openNewShift(); return}
     openCustomersPage()
 })
-$(document).on("click", ".inputGroup .fa.fa-plus-circle-o", ()=> {
-    createCustomer()
-})
-/*------------- Open Customers Page  */
-$(document).on("click", "#invTaxRatesCash .ul-dropdown-inner li", (e)=> {
-    let overlay = document.querySelector('#overlay-content')
-    console.log(e.currentTarget)
-    let li = e.currentTarget.closest('li');
-    let taxRate = li.getAttribute('value')
-    let invTotal = overlay.querySelector('#totalInvValueDiv').value
-    let invSubTotal = overlay.querySelector('#invSubTotal').value
-        invSubTotal = parseFloat(invSubTotal.replace(/,/g, ''))
-    let invDiscount = overlay.querySelector('#invDiscount').value
-        invDiscount = parseFloat(invDiscount.replace(/,/g, ''))    
-
-    let taxAmount = taxRate == 0 ? 0 : ((taxRate/100) * invSubTotal)
-    invTotal = taxRate == 0 ? (invSubTotal - invDiscount) : ((invSubTotal - invDiscount) + ((taxRate/100) * (invSubTotal - invDiscount)))
-    console.log(`taxAmount: ${taxAmount}, invTotal: ${invTotal}`)
-    overlay.querySelector('#taxValueDiv').value = formatAccounting(taxAmount)
-    overlay.querySelector('#totalInvValueDiv').value = formatAccounting(invTotal)
-})
-/*================================================================ */
-//------------------------- Callback Functions
-/*================================================================*/
-function formatAccounting(value) {
-    if(typeof value == 'undefined'){value= 0};
-    return new Intl.NumberFormat('en-US', {
-        style: 'decimal',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(value);
-}
-function createOverlay(){
-    let div = document.createElement('div')
-    div.classList.add('overlay-container','d-flex','cntnt-c','algn-i-c')
-    div.id ='overlay-container'
-    div.innerHTML =` <div class="overlay-content" id="overlay-content"></div>`
-    document.body.appendChild(div)
-}
-function removerOverlay(){
-    let posOverlay = document.getElementById('overlay-container')
-    posOverlay.remove()
-}
-function removeElementWithID(eleID){
-    let eleToRemove = document.getElementById(eleID)
-    eleToRemove.remove()
-}
-//------------------------- Error Message
-function errMessage(msg){  
-    apex.message.showPageSuccess(msg); 
-    $('#t_Alert_Success').attr('style','background-color: #ffe5ad;');
-    $('.t-Alert-title').attr('style','color: black;font-weight: bold;');
-    $('#t_Alert_Success div div.t-Alert-icon span').removeClass('t-Icon').addClass('fa fa-warning');
-    setTimeout(function() {
-        apex.message.hidePageSuccess();
-    }, 3000);
-}
-function successMessage(msg){  
-    apex.message.showPageSuccess(msg); 
-    setTimeout(function() {
-        apex.message.hidePageSuccess();
-    }, 3000);
-}
-function showLoader(elementToAppend){
-    elementToAppend.style.position = 'relative';
-    let div = document.createElement('div');
-    div.classList.add('loading-animation')
-    div.id = 'loadingAnimation'
-    div.style.cssText=`position: absolute;width: 100%;height: 100%;top: 0;background: #00000000;left: 50%;
-                        top: 50%;transform: translate(-50%, -50%);height: 100%;display: flex;justify-content: center;
-                        align-items: center;`
-    div.innerHTML=`
-        <div id="wifi-loader">
-            <svg class="circle-outer" viewBox="0 0 86 86">
-                <circle class="back" cx="43" cy="43" r="40"></circle>
-                <circle class="front" cx="43" cy="43" r="40"></circle>
-                <circle class="new" cx="43" cy="43" r="40"></circle>
-            </svg>
-            <svg class="circle-middle" viewBox="0 0 60 60">
-                <circle class="back" cx="30" cy="30" r="27"></circle>
-                <circle class="front" cx="30" cy="30" r="27"></circle>
-            </svg>
-            <svg class="circle-inner" viewBox="0 0 34 34">
-                <circle class="back" cx="17" cy="17" r="14"></circle>
-                <circle class="front" cx="17" cy="17" r="14"></circle>
-            </svg>
-            <div class="text" data-text="Loading"></div>
-        </div>`
-    
-    elementToAppend.appendChild(div)
-}
-function removeLaoder(appendedParent){
-    appendedParent.style.position = null;
-    let posLoading = document.getElementById('loadingAnimation')
-    posLoading.remove()
-}

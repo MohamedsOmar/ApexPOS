@@ -1,0 +1,277 @@
+/* ------------------ POS Main Conatiner */
+.pos-conatiner {
+    height: 100vh;
+}
+/*=================================================================================
+  ------------------ Left side Items & Categories
+==================================================================================*/
+.search-cat {
+    margin-left: 15px;
+}
+.input-group.input-field,
+.search-cat .input-group{
+    position: relative;
+    background: var(--bg-clr-1);
+    height: 35px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    margin: 10px;
+    margin-left: 30px;
+    transition: var(--main-transition)
+}
+
+.input-group.input-field:has(input:focus),
+.search-cat .input-group:has(input:focus){
+    border: 1px solid var(--main-clr-1);
+}
+.input-group.input-field input,
+.search-cat .input-group input{
+    width: 90%;
+    border: 0;
+    height: 100%;
+    padding: 10px;
+    outline: transparent;
+}
+.input-group.input-field span,
+.search-cat .input-group span{
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translate(-50%, -50%);
+}
+
+.pos-conatiner .pos-select{
+    max-width: calc(100% - 515px);
+    max-height: 100%;
+}
+/*------------------------------------------- Categorioes */
+
+.pos-select .pos-categories{
+    height: 84px;
+    padding: 0 20px;
+}
+.pos-select .pos-open-invoices{
+    height: 84px;
+    padding: 0 10px 0 0;
+}
+.pos-select .invoices-contianer{
+    width: 90%;
+}
+
+.pos-select .invoices-contianer .invoices-wrapper{
+    max-width:100%;
+}
+.pos-select .invoices-wrapper .invoices-content{
+    max-width:100%;
+    min-height: 100%;
+}
+.pos-select .invoices-wrapper .invoices-content .invoice-row{
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.overlay-content .payMethods .selected-pay,
+.invoices-content .invoice-row.selected-invoice,
+.categories-container .category-row.is-cat-active{
+    background: var(--main-clr-2);
+    color: var(--t-clr-1);
+}
+
+.pos-select .pos-open-invoices .create-new-invoice{
+    height: 80%;
+    margin-right:30px ;
+}
+.pos-select .pos-categories .categories-container{
+    max-width:100%;
+    min-height: 100%;
+}
+
+.categories-container .category-row{
+    min-width: 200px;
+    width: 200px;
+}
+.categories-container .category-row.selected-category,
+.categories-container .category-row:hover{
+    background: var(--main-clr-2);
+    color: var(--t-clr-1);
+} 
+.categories-container .category-row:hover{
+    background: var(--main-clr-2);
+    color: var(--t-clr-1);
+} 
+.categories-container .category-row.is-cat-active{
+    background: var(--main-clr-2);
+    color: var(--t-clr-1);
+}
+/*------------------------------------------- Items Container */
+.pos-items .search-cat {
+    width: 60%;
+    margin-left: 15px;
+    margin-bottom: 10px;
+}
+.pos-items .search-cat .input-group{
+    position: relative;
+    background: white;
+    height: 35px;
+    border: 1px solid #0000001c;
+    border-radius: 20px;
+    width: 80%;
+}
+.pos-items .search-cat .input-group input{
+    width: 90%;
+    border: 0;
+    height: 100%;
+    padding: 10px;
+    outline: transparent;
+}
+.pos-items .search-cat .input-group span{
+    position: absolute;
+    top: 50%;
+    right: 0;
+    color: var(--t-clr-1);
+    transform: translate(-50%, -50%);
+}
+.pos-select .pos-items .items-conatiner {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 250px));
+}
+.pos-select .pos-items .items-conatiner .item-row{
+    height: 300px;
+    width: 250px;
+}
+
+@media (max-width: 767px) {
+    .pos-select .pos-items .items-conatiner .item-row{
+        height: 300px;
+        width: 250px;
+    }
+    .pos-select .pos-items .items-conatiner{
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    .pos-conatiner .pos-select{
+        max-width: 100vw;
+        overflow: auto;
+    }
+}
+  /* Medium */
+@media (max-width: 1190px) {
+    .pos-select .pos-items .items-conatiner .item-row{
+        height: 250px;
+        width: 200px;
+    }
+    .pos-select .pos-items .items-conatiner{
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    .pos-conatiner .pos-select{
+        max-width: 100vw;
+        overflow: auto;
+    }
+}
+
+.pos-select .pos-items .items-conatiner .item-row .img-holder{
+    height: 70%;
+}
+
+.pos-select .pos-items .items-conatiner .item-row .item-wrapper .item_description{
+    padding: 5px 10px;
+    font-size: 15px;
+}
+.pos-select .pos-items .items-conatiner .item-row .item-wrapper .item-tag.Not-Available{color: rgb(0 0 0 / 34%);}
+.pos-select .pos-items .items-conatiner .item-row .item-wrapper .item-tag.Low-Stock{color: #d8c920;}
+.pos-select .pos-items .items-conatiner .item-row .item-wrapper .item-tag.Available{color: #7de163;}
+/*=================================================================================
+  ------------------ Right Side POS Invoice
+==================================================================================*/
+.pos-conatiner .pos-t-container{
+    width: 500px;
+}
+/*----------------------- POS Table Inputs and POS Buttons ----------------------------*/
+/*=========================================== Invoice Table  */
+.pos-conatiner .pos-t-container .inv-table{
+    max-height: 55vh;
+    margin: 0 0 20px 0;
+}
+.inv-table .items-table{
+    margin-bottom: 10px;
+    min-width: min-content;
+}
+.items-table .s-item-row{
+    width: calc(100% - 15px);
+    margin-left: 10px;
+    border-bottom: 1px solid #00000017;
+}
+.content-wrapper .item .item-img .img-holder,
+.items-table .s-item-row .item-img .img-holder{
+    width:  50px;
+    height: 50px;
+}
+.items-table .s-item-row .img-holder .fa.fa-trash{
+    width: 100%;
+    height: 100%;
+    font-size: 20px;
+    cursor: pointer;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-clr-1);
+    color: red;
+    font-weight: normal;
+}
+.items-table .s-item-row .img-holder:hover .fa.fa-trash{
+    display: flex;
+}
+
+.items-table .s-item-row .item-disc{
+    width: 45%;
+}
+.items-table .s-item-row .item-disc :nth-child(2){
+    font-weight: normal;
+}
+.items-table .s-item-row .qty-col{
+    width: 50%;
+}
+.items-table .s-item-row .qty-row{
+    border-radius: 20px;
+    padding: 6px 30px;
+    border: 1px solid var(--main-clr-1);
+    width: 60%;
+}
+.items-table .s-item-row .qty-row input{
+    width: 50px;
+    background-color: transparent;
+    border: 0;
+}
+.items-table .s-item-row .qty-less{
+    left: 17px;
+}
+.items-table .s-item-row .qty-plus{
+    right: 0;
+}
+.items-table .s-item-row .qty-less .fa.fa-minus-circle-o,
+.items-table .s-item-row .qty-plus .fa.fa-plus-circle-o{
+    border-radius: 50px;
+}
+/*------- POS Invoice Numbers ----------*/
+.pos-t-container .numbers .number{
+    padding: 0 50px;
+}
+.pos-t-container .numbers::before,
+.pos-t-container .numbers::after{
+  content: '';
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  background: var(--bg-clr-1);
+  border-radius: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  box-shadow: var(--box-shadow-sec);
+}
+.pos-t-container .numbers::after,
+.content-wrapper .numbers::after{
+    left: -2px;
+}
+.content-wrapper .numbers::before,
+.pos-t-container .numbers::before{
+    right: -51px;
+}

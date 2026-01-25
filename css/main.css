@@ -1,12 +1,4 @@
 :root{
-  /* --bg-clr-2:#f6f6f5;
-  --bg-clr-1:#fff;
-  --main-clr-2:#cbead6;
-  --main-clr-1: #34b769;
-  --t-clr-1:black;
-  --t-clr-2:rgba(0, 0, 0, 0.5);
-  --color-9:red; */
-  
   --bg-clr-1:#fff;
   --bg-clr-2:rgb(244 248 255);
   --main-clr-1: rgb(50,130,222);
@@ -51,6 +43,15 @@
 body {
   background-color: var(--bg-clr-2);
   color: var(--t-clr-1);
+  -ms-overflow-style: none;  
+  /* scrollbar-width: none;  */
+}
+/* body::-webkit-scrollbar {
+  display: none;  
+} */
+
+input{
+    outline: 0 !important;
 }
 img {
   object-fit: cover;
@@ -63,7 +64,76 @@ ul{
   margin: 0;
 }
 h1,h2,h3,h4,h5,h6,p{margin: 0;padding: 0;}
-a{text-decoration: none;color: inherit}
+a{text-decoration: none;
+  /* color: inherit */
+}
+
+input{
+  overflow: hidden;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/*===========================================*/
+ /*-------------- Force Override APEX Styles */
+.t-Footer{
+  display: none;
+}
+.t-Header{
+  display: none;
+}
+
+.t-Body-contentInner{
+  margin: 0;
+  padding: 0;
+}
+form#wwvFlowForm{
+  min-height: auto;
+}
+input[type="text"],
+input[type="search"],
+input[type="password"],
+textarea,
+select{
+    border-radius: 10px !important;
+    background-color: transparent !important;
+}
+button[type="button"].a-Button.a-Button--calendar{
+    display: none;
+}
+.apex-item-text.apex-item-datepicker{
+    border-radius: 10px;
+}
+.apex-item-comboselect.apex-item-comboselect--separated{
+    border-radius: 10px !important;
+    background-color: transparent !important;
+}
+
+
+/* .t-Header-branding{
+    background-color: var(--ut-header-background-color)
+} */
+/* .t-Body-contentInner{
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+.container,
+.row ,
+.col,
+.t-Region,
+.t-Region-bodyWrap,
+.t-Region-body{
+    height: 100%;
+}
+.container, .row, .col, .t-Region, .t-Region-bodyWrap, .t-Region-body {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+} */
 
 /*/========== Button Styling ============/*/
 .hover-btn, .hover-brdr-btn, .click-btn{transition: var(--main-transition);cursor: pointer;}
@@ -73,6 +143,7 @@ a{text-decoration: none;color: inherit}
 .click-btn:active{transform: scale(0.90);}
 
 .btn-style,
+.btn-style-wa,
 .btn-style-brdr{
   outline: 0;
   width: 150px;
@@ -83,7 +154,12 @@ a{text-decoration: none;color: inherit}
   cursor: pointer;
   transition: all 0.4s ease;
 }
-.btn-style{
+.btn-style-wa{
+  width: auto;
+  padding: 7px 10px;
+}
+.btn-style,
+.btn-style-wa{
   border: 1px solid transparent;
   background: var(--main-clr-1);
   color: var(--bg-clr-1);
@@ -93,13 +169,15 @@ a{text-decoration: none;color: inherit}
   background: transparent;
   color: var(--main-clr-1);
 }
-.dark .btn-style{
+.dark .btn-style,
+.dark .btn-style-wa{
   color: var(--t-clr-1);
 }
 .dark .selected-invoice .t-clr-5{
   color: var(--t-clr-1);
 }
-.btn-style:hover{
+.btn-style:hover,
+.btn-style-wa:hover{
   transform: translateY(-1px);
   background: var(--bg-clr-1);
   border: 1px solid var(--main-clr-1);
@@ -115,11 +193,24 @@ a{text-decoration: none;color: inherit}
   color:  var(--t-clr-1);
 }
 .btn-style:active ,
+.btn-style-wa:active ,
 .btn-style-brdr:active {
   transform: scale(0.95);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
+
+.card-item{
+  padding: 30px;
+  border-radius: 10px;
+  background: var(--bg-clr-1);
+  box-shadow: var(--box-shadow-sec);
+  color: var(--t-clr-1);
+  display: flex;
+  gap: 10px;
+  font-size: 25px;
+  font-weight: bold;
+}
 /*/========== Classes ============/*/
 /*----Place Item in the middle of Parent ---*/
 .item-c{
@@ -135,7 +226,6 @@ a{text-decoration: none;color: inherit}
     font-size: 25px;
     color: var(--main-clr-1);
 }
-
 /*/========== Background Colors ============/*/
 .bg-clr-1{background-color: var(--bg-clr-2);}
 .bg-clr-3{background-color: var(--bg-clr-1);}
@@ -144,6 +234,15 @@ a{text-decoration: none;color: inherit}
 .bg-clr-7{background-color: var(--t-clr-1);}
 .bg-clr-8{background-color: var(--t-clr-2);}
 .bg-clr-9{background-color: var(--color-9);}
+
+/*/========== Hover ============/*/
+.hover-clr-1:hover{background-color: var(--main-clr-1); color: var(--bg-clr-1);}
+.hover-clr-2:hover{background-color: var(--); color: var(--);}
+.hover-clr-3:hover{background-color: var(--); color: var(--);}
+.hover-clr-4:hover{background-color: var(--); color: var(--);}
+.hover-clr-5:hover{background-color: var(--); color: var(--);}
+.hover-clr-6:hover{background-color: var(--); color: var(--);}
+.hover-clr-7:hover{background-color: var(--); color: var(--);}
 
 /*/========== Text Style ============/*/
 .t-clr-1{color: var(--bg-clr-2);}
@@ -263,9 +362,6 @@ a{text-decoration: none;color: inherit}
     color: red;
     padding-top: 10px;
 }
-.overlay-content .content-row{
-    margin: 1em 0 0 0;
-}
 /* ------------------------- Overlay  -------------------------*/ 
 .overlay-container {
   position: absolute;
@@ -277,35 +373,40 @@ a{text-decoration: none;color: inherit}
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-.overlay-container .overlay-content {
-    width: 60%;
-    height: 80%;
-    background: var(--bg-clr-2);
-    display: flex;
+.overlay-container .overlay-content,
+.overlay-container .overlay-content .content-body-wrap {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgb(0 0 0 / 10%);
+}
+.overlay-container .overlay-content .content-body{
     justify-content: center;
     align-items: center;
-    padding: 10px;
+    display: flex;
+    background: var(--bg-clr-1);
+    position: relative;
+    height: 88%;;
     border-radius: 10px;
     box-shadow: var(--box-shadow-sec);
     animation: bounce 1s;
-}
-.overlay-container .overlay-content .content-body{
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    position: relative;
+    overflow: hidden;
+    padding: 10px;
 }
 .content-body .form-wrap{
   display: flex;
   width: 100%;
   height: 100%;
+  max-height: 100%;
 }
 .content-body .form-title{
   position: absolute;
-  top: 6px;
-  left: 11px;
+  top: 9px;
+  left: 19px;
   font-size: 25px;
 }
 .content-body .form-data{
@@ -320,9 +421,8 @@ a{text-decoration: none;color: inherit}
 .content-body .form-data .content-wrapper{
   flex: 1;
   width: 100%;
-  
 }
-.inputNumbers .number,
+.inputNumbers .numKey,
 .inputNumbers .dNumber {
   border-radius: 10px;
   font-size: 20px;
@@ -341,7 +441,7 @@ a{text-decoration: none;color: inherit}
 .inputGroup .input{
   opacity: 1;
   outline: none;
-  border: 2px solid var(--main-clr-1);
+  border: 1px solid var(--main-clr-1);
   border-radius: 10px;
   background-color: inherit;
   width: 100%;
@@ -361,7 +461,7 @@ a{text-decoration: none;color: inherit}
   margin-left: 1.3em;
   padding: 0 0.4em;
   color: var(--t-clr-1);
-  background-color: var(--bg-clr-1);
+  background-color: var(--bg-clr-2);
   z-index: 1;
 }
 
@@ -387,6 +487,37 @@ a{text-decoration: none;color: inherit}
     transform: translateY(-20px);
     opacity: 0;
   }
+}
+/*=================================================================================
+  ------------------ Nav Bar
+==================================================================================*/
+
+.appNavBar{
+    position: absolute;
+    left: -100%;
+    top: 0;
+    height: 100vh;
+    width: 100vw;
+    background: #00000000;
+    z-index: 100;
+    transition: all 0.5s ease-in;
+}
+.appNavBar.nav-active {
+  left: 0;
+}
+.nav-bar-wrapper{
+    width: 20%;
+}
+#navigationBarMenueClose{
+    top: 11px;
+    right: 12px;
+    z-index: 1;
+}
+#navigationBarMenueClose span{
+    z-index: 1;
+}
+#appNavBar a{
+  color: var(--t-clr-1) !important;
 }
 /*=================================================================================
   ------------------ Loader
