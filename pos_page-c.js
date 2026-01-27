@@ -843,7 +843,7 @@ try{
         headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', header.invTaxID);
         const numbers = document.querySelectorAll('.pos-t-container .numbers .number');
             numbers[0].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invTotal)} ${branchCurrencySymbole}`;
-            numbers[1].querySelector('span:nth-child(1)').textContent = `Tax`;
+            numbers[1].querySelector('span:nth-child(1)').textContent = `Tax (${header.invTaxRateValue}%)`;
             numbers[1].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invTaxAmt)} ${branchCurrencySymbole}`;
             numbers[2].querySelector('span:nth-child(2)').textContent = `${formatAccounting(header.invFinalTotal)} ${branchCurrencySymbole}`;
         document.querySelectorAll('.invoices-content .invoice-row').forEach((ele)=>{
@@ -959,15 +959,11 @@ try{
         soldItems.forEach(row => {
             const priceEl = row.querySelector(".price");
             const qtyInput = row.querySelector("input.qty");
-            const itemTaxRateID    = row.querySelector(".itemTaxRateID")?.textContent.trim();
-            const itemTaxAmount    = row.querySelector(".itemTaxAmount")?.textContent.trim();
-            const itemBasePrice    = row.querySelector(".itemBasePrice")?.textContent.trim();
             const price = parseFloat(priceEl?.textContent?.replace(/,/g, '')) || 0;
             const qty   = parseInt(qtyInput?.value || '0', 10) || 0;
             if (qty <= 0 || price <= 0) return; 
             const amount = qty * price;
-            console.log('Save: >> ', itemTaxRateID, itemTaxAmount, itemBasePrice)
-            saveLine(row, 1, price, price, true, itemTaxRateID, itemTaxAmount, itemBasePrice);
+            saveLine(row, qty, price, amount, true)
         });
         triggerChangedInvoice()
         fetchOpenInvoices();
@@ -1418,9 +1414,6 @@ async function handleItemClick(clickedRow) {
         if (!itemID) return;
         const itemName = row.querySelector(".item_name").textContent.trim();
         const itemPrice = parseFloat(row.querySelector(".item_price").textContent.replace(/,/g, '')) || 0;
-        const itemTaxRateID = row.querySelector(".itemTaxRateID").textContent;
-        const itemTaxAmount = parseFloat(row.querySelector(".itemTaxAmount").textContent.replace(/,/g, '')) || 0;
-        const itemBasePrice = parseFloat(row.querySelector(".itemBasePrice").textContent.replace(/,/g, '')) || 0;
         const itemUOM  = row.querySelector(".item_uom").textContent.trim();
         let itemImg = row.querySelector('img').getAttribute("src")?.trim() || "";
             itemImg = itemImg.replace(/\n/g, '').trim();
@@ -1461,11 +1454,6 @@ async function handleItemClick(clickedRow) {
                     <div style="display: none;" class="item-name" title="${itemName}">${itemName}</div>
                     <div style="display: none;" class="price">${formatAccounting(itemPrice)}</div>
                     <div style="display: none;" class="uom">${itemUOM}</div>
-                    <div style="display: none;" class="itemTaxRateID">${itemTaxRateID}</div>
-                    <div style="display: none;" class="itemTaxAmount">${itemTaxAmount}</div>
-                    <div style="display: none;" class="itemBasePrice">${itemBasePrice}</div>
-                    <div style="display: none;" class="uom">${itemUOM}</div>
-                    <div style="display: none;" class="uom">${itemUOM}</div>
                     <div style="display: none;" class="amount">${formatAccounting(itemPrice)}</div>
                     <div class="item-img d-flex cntnt-c algn-i-c">
                         <div class="img-holder flow-h postion-r brdr-r-m d-flex cntnt-c algn-i-c bx-shadow-s">
@@ -1499,11 +1487,6 @@ async function handleItemClick(clickedRow) {
     }
     function posTableLines(trSelected, currentQty) {
         const row = trSelected; 
-        console.log(trSelected)
-        
-        const itemTaxRateID    = row.querySelector(".itemTaxRateID")?.textContent.trim();
-        const itemTaxAmount    = row.querySelector(".itemTaxAmount")?.textContent.trim();
-        const itemBasePrice    = row.querySelector(".itemBasePrice")?.textContent.trim();
         const itemID    = row.querySelector(".item-id")?.textContent.trim();
         const invLineID = row.querySelector(".inv-line-id")?.textContent.trim();
         const priceText = row.querySelector(".price")?.textContent.replace(/[^0-9.-]+/g, "");
@@ -1513,9 +1496,9 @@ async function handleItemClick(clickedRow) {
         row.querySelectorAll(".amount").forEach(ele=>ele.textContent=formatAccounting(amount.toFixed(2)));
         if (invoiceID) {
             if(invLineID){
-                updateLine(itemID, qty, price, amount, invLineID, itemTaxRateID, itemTaxAmount, itemBasePrice);
+                updateLine(itemID, qty, price, amount, invLineID);
             }else {
-                saveLine(row, 1, price, price, false, itemTaxRateID, itemTaxAmount, itemBasePrice);
+                saveLine(row, 1, price, price, false);
             }
         }
         if(!invoiceID){
@@ -1530,16 +1513,13 @@ async function handleItemClick(clickedRow) {
     }
 }
 /* ------------------------ Save Line to DB ------------------------ */
-async function saveLine(row, qty, price, amount, newInv, itemTaxRateID, itemTaxAmount, itemBasePrice) {
+async function saveLine(row, qty, price, amount, newInv) {
 try{
     if(!openShiftID){openNewShift(); return}
-    console.log(itemTaxRateID, itemTaxAmount, itemBasePrice)
     var itemID = row.querySelector(".item-id").textContent;
     let invType = ''
     let lineType = invType =='Return Invoice' ? 'RI' :'SI'
-    let data = await apex.server.process("ADD_INV_LINE_TO_DB",{x01: itemID,x02: qty,x03: price,x04: amount,x05: invoiceID,x06: lineType,
-        x07:itemTaxRateID, x08:itemTaxAmount, x09:itemBasePrice
-    },{dataType: "json"})
+    let data = await apex.server.process("ADD_INV_LINE_TO_DB",{x01: itemID,x02: qty,x03: price,x04: amount,x05: invoiceID,x06: lineType},{dataType: "json"})
     if (data.status !== "SUCCESS") {
         apex.message.alert(data.message || "Error saving line");
         errLog(logFor,'saveLine()',pageID, logFile,err,logShift,logUser)
@@ -1561,7 +1541,7 @@ try{
 }
 }
 /* ------------------------ Update DB Line ------------------------- */
-async function updateLine(itemID, qty, price, amount, invLineID, itemTaxRateID, itemTaxAmount, itemBasePrice) {
+async function updateLine(itemID, qty, price, amount, invLineID) {
 try{
     if(!openShiftID){openNewShift(); return}
     let data = await apex.server.process("UPDATE_INV_LINE",{x01: itemID,x02: qty,x03: price,x04: amount,x05: invLineID},{dataType: "json"})

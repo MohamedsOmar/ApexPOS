@@ -44,12 +44,9 @@ body {
   background-color: var(--bg-clr-2);
   color: var(--t-clr-1);
   -ms-overflow-style: none;  
-  /* scrollbar-width: none;  */
+  scrollbar-width: thin;
+  scrollbar-color: var(--main-clr-2) #ee0c0c00;
 }
-/* body::-webkit-scrollbar {
-  display: none;  
-} */
-
 input{
     outline: 0 !important;
 }
@@ -64,33 +61,13 @@ ul{
   margin: 0;
 }
 h1,h2,h3,h4,h5,h6,p{margin: 0;padding: 0;}
-a{text-decoration: none;
-  /* color: inherit */
-}
+a{text-decoration: none;}
 
-input{
-  overflow: hidden;
-}
+input{overflow: hidden;}
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-/*===========================================*/
- /*-------------- Force Override APEX Styles */
-.t-Footer{
-  display: none;
-}
-.t-Header{
-  display: none;
-}
-
-.t-Body-contentInner{
-  margin: 0;
-  padding: 0;
-}
-form#wwvFlowForm{
-  min-height: auto;
 }
 input[type="text"],
 input[type="search"],
@@ -99,6 +76,31 @@ textarea,
 select{
     border-radius: 10px !important;
     background-color: transparent !important;
+}
+button{
+  outline: transparent;
+  border-color: transparent;
+}
+button:focus,
+button:hover{
+  outline: transparent;
+  border-color: transparent;
+}
+/*===========================================*/
+/* -------------- Force Override APEX Styles */
+/* Global Elements & Inputs*/
+.t-Footer{
+  display: none;
+}
+.t-Header{
+  display: none;
+}
+.t-Body-contentInner{
+  margin: 0;
+  padding: 0;
+}
+form#wwvFlowForm{
+  min-height: auto;
 }
 button[type="button"].a-Button.a-Button--calendar{
     display: none;
@@ -110,37 +112,164 @@ button[type="button"].a-Button.a-Button--calendar{
     border-radius: 10px !important;
     background-color: transparent !important;
 }
-
-
-/* .t-Header-branding{
-    background-color: var(--ut-header-background-color)
-} */
-/* .t-Body-contentInner{
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
+.selectlist.apex-item-select{
+  cursor: pointer;
+  color: var(--t-clr-1);
+} 
+.selectlist.apex-item-select option {
+  padding: 10px 16px;
+  color: var(--t-clr-1);
+  background: var(--bg-clr-1);  
+  cursor: pointer;
 }
-.container,
-.row ,
-.col,
-.t-Region,
-.t-Region-bodyWrap,
-.t-Region-body{
-    height: 100%;
+/* Confirm Message Model */
+.ui-dialog.ui-front{
+  background-color: inherit;
+  color: inherit;
 }
-.container, .row, .col, .t-Region, .t-Region-bodyWrap, .t-Region-body {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-} */
+/* ---------- Model Pages D */
+.t-Drawer-bodyWrapperIn, .t-Drawer-body{
+  background-color: var(--bg-clr-1);
+}
+.t-Dialog-bodyWrapperOut,
+.t-ButtonRegion{
+  background: var(--bg-clr-1);
+}
+/* Form Headers And Footers */
+.ui-dialog.t-Drawer--pullOutEnd{
+  background:var(--bg-clr-1);
+}
+.ui-dialog-titlebar{
+  background: var(--bg-clr-1);
+  color: var(--t-clr-1);
+}
+/* From Close Buttons */
+.ui-dialog-titlebar button,
+.ui-dialog-titlebar button:focus{
+  background: red;
+  color: white;
+  outline: transparent;
+}
+/* Form Inputs */
+.t-Form-fieldContainer,
+.t-Form-fieldContainer textarea,
+.t-Form-fieldContainer input{
+  background:var(--bg-clr-1) ;
+  color: var(--t-clr-1) ;
+  outline: var(--main-clr-2);
+}
+.t-Form-fieldContainer input:focus,
+.t-Form-fieldContainer textarea:focus,
+.t-Form-fieldContainer select:focus{
+    color: var(--t-clr-1) ;
+    outline: var(--main-clr-1);
+    border: 1px solid var(--main-clr-1);
+}
+.t-Form-fieldContainer--floatingLabel.apex-item-wrapper--textarea:focus-within .t-Form-label:before {
+    background-color: inherit;
+}
+.t-Form-fieldContainer .t-Form-label,
+.t-Form-fieldContainer .t-Form-labelContainer{
+  color: var(--t-clr-1);
+}
+.a-FileDrop-icon span{
+  color: var(--t-clr-1);
+}
 
+.a-ComboSelect-item{
+  background: var(--bg-clr-1);
+  color: var(--t-clr-1);
+}
+.a-ComboSelect-item.is-selected{
+  color: var(--bg-clr-1);
+  background: var(--main-clr-1);
+}
+/* Interactive Grid */
+.a-IRR{
+  outline-color: transparent;
+  background: var(--bg-clr-1);
+  border-color: transparent;
+}
+.a-IRR-header,
+.a-IRR-toolbar{
+  background: var(--bg-clr-1);
+  text-wrap: nowrap;
+  border-color: var(--main-clr-2);
+}
+.a-IRR-reportView{
+  background: var(--bg-clr-1);
+}
+.a-IRR-table{
+  border: 1px solid var(--main-clr-2);
+}
+.a-IRR-table td{
+  border-color: var(--main-clr-2);
+  border-style: solid;
+}
+
+.a-IRR-tableContainer{
+  scrollbar-width: thin;
+  scrollbar-color: var(--main-clr-2) #ee0c0c00;
+}
+.a-GV-row.is-hover, 
+.a-IRR-table tr:hover td {
+    background-color: var(--bg-clr-1);
+}
+.a-IRR-sortWidget{
+  background: var(--bg-clr-1);
+  color: var(--t-clr-1);
+}
+.a-IRR-sortWidget .a-IRR-sortWidget-actions .a-IRR-sortWidget-actions-item button{
+    background: var(--bg-clr-1);
+    color: var(--t-clr-1);
+}
+.a-IRR-sortWidget-search input{
+  outline: var(--main-clr-1);
+  color: var(--t-clr-1);
+}
+.a-IRR-sortWidget-search > .a-IRR-sortWidget-searchField[type="text"]{
+  color: var(--t-clr-1);
+}
+
+.a-IRR-search{
+  gap: 10px;
+}
+.a-IRR-actions button,
+.a-IRR-search button{
+  background: var(--bg-clr-1);
+  color: var(--t-clr-1);
+}
 /*/========== Button Styling ============/*/
+.apply-btn{
+  background: var(--main-clr-1);
+  color: var(--bg-clr-1);
+  border-color:transparent;
+  outline-color: transparent;
+}
+.apply-btn:hover{
+  transform: translateY(-1px);
+  background: var(--bg-clr-1);
+  border: 1px solid var(--main-clr-1);
+  color: var(--main-clr-1);
+  outline-color: transparent;
+}
+.delete-btn{
+  background-color: transparent;
+  border-color:red;
+  color:red;
+  outline-color: transparent;
+}
+.delete-btn:hover{
+  background-color: red;
+  border-color:red;
+  color:var(--t-clr-1)
+}
+
 .hover-btn, .hover-brdr-btn, .click-btn{transition: var(--main-transition);cursor: pointer;}
 .hover-btn:hover{background-color: var(--main-clr-2); }
 .hover-brdr-btn{border: 1px solid transparent;}
 .hover-brdr-btn:hover{border:1px solid var(--main-clr-1);}
-.click-btn:active{transform: scale(0.90);}
+.click-btn:active{transform: scale(0.90)}
 
 .btn-style,
 .btn-style-wa,
@@ -499,7 +628,7 @@ button[type="button"].a-Button.a-Button--calendar{
     height: 100vh;
     width: 100vw;
     background: #00000000;
-    z-index: 100;
+    z-index: 500;
     transition: all 0.5s ease-in;
 }
 .appNavBar.nav-active {
@@ -517,7 +646,7 @@ button[type="button"].a-Button.a-Button--calendar{
     z-index: 1;
 }
 #appNavBar a{
-  color: var(--t-clr-1) !important;
+  color: var(--t-clr-1);
 }
 /*=================================================================================
   ------------------ Loader

@@ -2,9 +2,16 @@ let userPermissions,
     sessionID = apex.env.APP_SESSION,
     appID = apex.env.APP_ID,
     activeUser = apex.env.APP_USER
+let branchLogo, branchID,branchName,branchRegNum,branchTaxNum, branchCurrencySymbole
+let baseUrl = `https://g6d02ee2f2519a5-financeapp.adb.ca-toronto-1.oraclecloudapps.com/ords/api/app/`
 var logFor='JavaScript', pageID = 0, logFile ='main.js', logShift = 0, logUser = activeUser
-let discountAccess = false, createCashAccess = false, createCustomerAccess = false, posCashierOnlyAccess = false, overRideTaxAccess = false,posCashierAdmin = false
 
+let discountAccess = false,
+    createCashAccess = false,
+    createCustomerAccess = false,
+    posCashierOnlyAccess = false,
+    overRideTaxAccess = false,
+    posCashierAdmin = false
 const accessRoles = {
     SUPER_USER:       "96268806872996572510171386761347521866",
     CREATE_CUSTOMER: "95959979848418912790978149798646558686",
@@ -14,18 +21,36 @@ const accessRoles = {
     OVERRIDE_TAX:    "96158064198195796792531173456791398221"
 };
 const pages = {
-    homePage: `/ords/r/carved/carved/home-page?session=${sessionID}`,
-    masterDataPage: `/ords/r/carved/carved/master-data-page?session=${sessionID}`,
-    salesInvoicePage :`/ords/r/carved/carved/sales-invoice-page?=${sessionID}`,
-    posPage :`/ords/r/carved/carved/pos-si-page?session=${sessionID}`,
+    companyBranches: `/ords/r/api/carved/company-profile-page?session=${sessionID}`,
+    homePage: `/ords/r/api/carved/home-page?session=${sessionID}`,
+    masterDataPage: `/ords/r/api/carved/master-data-page?session=${sessionID}`,
+    salesInvoicePage :`/ords/r/api/carved/sales-invoice-page?=${sessionID}`,
+    posPage :`/ords/r/api/carved/pos-si-page?session=${sessionID}`,
     logOutUrl :`apex_authentication.logout?p_app_id=101&p_session_id=${sessionID}`,
+}
+async function getBranchData(){
+    let option = `?q={"empinternalname":"${activeUser}"}`
+    let endPoint = `appUsers${option}`
+    let res = await fetchAPI(endPoint)
+    let branchid = res.branchid
+    option = `?q={"branchID":"${branchid}"}`
+    endPoint = `companyInfo${option}`
+    res = await fetchAPI(endPoint)
+    res = res[0]
+    branchLogo = res.branchLogo
+    branchID = res.branchID
+    branchName = res.branchName
+    branchRegNum = res.branchRegNum
+    branchTaxNum = res.branchTaxNum
+    branchCurrencySymbole = res.branchCurrencySymbole
 }
 async function fetchUserAccess() {
 try{
-    let data = await apex.server.process('GET_USER_ACCESS',{},{dataType: 'json'})
-    if (data.found == 'Y') {
-        userPermissions = data.items || [];
-        const grantedRoles = new Set(userPermissions.map(item => item.roleID));
+    // let data = await apex.server.process('GET_USER_ACCESS',{},{dataType: 'json'})
+        userPermissions = await fetchAPI(`userAccess/${activeUser.toUpperCase()}`)|| [];
+    if (userPermissions.length) {
+        const grantedRoles = new Set(userPermissions.map(item => item.role_id));
+        console.log('grantedRoles >> ', grantedRoles)
         posCashierAdmin = grantedRoles.has(accessRoles.SUPER_USER);
         createCustomerAccess   = posCashierAdmin || grantedRoles.has(accessRoles.CREATE_CUSTOMER);
         posCashierOnlyAccess   = grantedRoles.has(accessRoles.POS_CASHIER);
@@ -61,6 +86,7 @@ function buildApp(){
     document.body.appendChild(div)
 }
 async function createNavBar(closeShift, cashEntry){
+    await getBranchData()
     let app = document.querySelector('#app')
     let appNavBar = document.createElement('div')
         appNavBar.id = 'appNavBar'
@@ -75,9 +101,10 @@ async function createNavBar(closeShift, cashEntry){
             <div class="nav-logo d-flex-c gap-10">
                 <div class="d-flex-c algn-i-c cntnt-c t-size-4 gap-10">
                     <div class="img-holder" style="width: 120px;height: 120px;">
-                        <img src="r/carved/101/files/static/v6/icons/app-icon-256-rounded.png"/>
+                        <!--<img src="r/carved/101/files/static/v6/icons/app-icon-256-rounded.png"/> -->
+                        <img src="${branchLogo}"/>
                     </div>
-                    <div>Meme Gallery</div>
+                    <div>${branchName}</div>
                     <div class="t-size-t">User: ${activeUser}</div>
                 </div>
             </div>
@@ -86,6 +113,12 @@ async function createNavBar(closeShift, cashEntry){
                     <a href=${pages.homePage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
+                    <a href=${pages.companyBranches} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                        <span class="fa fa fa-home" aria-hidden="true"></span>
+                        <span>Company Branches</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
@@ -150,7 +183,7 @@ async function createNavBar(closeShift, cashEntry){
                     <span class="fa fa-times-square" aria-hidden="true"></span>
                     <div>Close Shift</div>
                 </div>`:''}
-                <a href=${pages.logOutUrl} class="w-100 btn-style d-flex-r gap-10 cntnt-c algn-i-c t-size-m hover-brdr-btn click-btn p-10 brdr-r-m bg-clr-9">
+                <a href=${pages.logOutUrl} class="delete-btn w-100 btn-style d-flex-r gap-10 cntnt-c algn-i-c t-size-m hover-brdr-btn click-btn p-10 brdr-r-m bg-clr-9">
                     <span class="fa fa-sign-out" aria-hidden="true"></span>
                     <div>Log Out</div>
                 </a>
@@ -199,7 +232,8 @@ function toggleTheme() {
     const icon = document.querySelector('#switch');
     icon.checked  = current == 'dark' ? false : true
 }
-function applySavedTheme (){
+function applySavedTheme(){
+try{
     let saved = localStorage.getItem('theme');
     if (!saved) {
         saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -211,11 +245,34 @@ function applySavedTheme (){
         }
     });
     const icon = document.querySelector('#switch');
-    icon.checked  = saved == 'dark' ? false : true
+    if(icon){
+        icon.checked  = saved == 'dark' ? false : true
+    }
+}catch(err){}
 };
 /*================================================================ */
 //------------------------- Callback Functions
 /*================================================================*/
+async function fetchAPI(endPoint){
+    try{
+        const apiUrl = `${baseUrl}${endPoint}`; 
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            errLog(logFor, `fetchAPI(${endPoint})`, pageID, logFile, `${response.status}`, logShift, logUser);
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const res = await response.json();
+        const items = res.items;
+        return items; 
+    } catch(err){
+        console.error(err);
+        if (typeof errLog === 'function') {
+            errLog(logFor, `fetchAPI(${endPoint})`, pageID, logFile, err, logShift, logUser);
+        }
+        throw err; 
+    }
+}
+
 function createCashEnrty(){
     if(!openShiftID){openNewShift(); return}
     createOverlay()

@@ -1,5 +1,6 @@
 var  actionConfirmed = false
-var logFor='JavaScript', pageID = 1, logFile ='home_page.js', logShift = 0, logUser = activeUser
+var logFor='JavaScript', pageID = 1, logFile ='masterdata_page.js', logShift = 0, logUser = activeUser
+let apexContentContianer
 /*================================================================ */
 document.addEventListener("DOMContentLoaded", initPage);
 async function initPage() {
@@ -16,13 +17,16 @@ async function initPage() {
 async function createPageStructure() {
 try{
     if(!userPermissions){return}
+    apexContentContianer = document.querySelector('#companyBranchesTable');
+    let companyBranchesTable_search_button = document.querySelector('#companyBranchesTable_search_button')
+        companyBranchesTable_search_button?.click()
     let app = document.querySelector('#app')
-    let pos = document.createElement('div')
-    pos.id='pos-container'
-    pos.classList.add('pos-conatiner','width-100','flow-h','bg-clr-1','t-clr-7')  
-    let divposWrapper = document.createElement('div');
-    divposWrapper.classList.add('pos-wrapper','d-flex','cntnt-sb','h-100','w-100','d-flx-wrap','t-clr-7');
-    divposWrapper.innerHTML = `
+    let contentContainer = document.createElement('div')
+    contentContainer.id='contentContainer'
+    contentContainer.classList.add('content-container','width-100','flow-h','bg-clr-1','t-clr-7')  
+    let divContentWrapper = document.createElement('div');
+    divContentWrapper.classList.add('content-wrapper','d-flex-c','cntnt-sb','h-100','w-100','d-flx-wrap','t-clr-7');
+    divContentWrapper.innerHTML = `
     <div class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10">
         <div class="d-flex-r w-100 postion-r algn-i-c flow-h gap-10" style="height:25px">
             <div class="navigation-bar h-100" id="navigationBarMenueOpen">
@@ -39,13 +43,24 @@ try{
     <div id="cardsHolder" class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10" style="max-width:100%">
     </div>
     `;
-    pos.appendChild(divposWrapper)
-    app.appendChild(pos)
+    contentContainer.appendChild(divContentWrapper)
+    app.appendChild(contentContainer)
+    function moveApexContianer(){
+        let appContainer = document.querySelector('#app');
+        let contentContainer = appContainer.querySelector('#contentContainer');
+        let container = contentContainer.querySelector('#cardsHolder');
+        let div = document.createElement('div')
+        div.style.cssText='box-shadow: var(--box-shadow-sec);'
+        container.appendChild(div)
+        div.appendChild(apexContentContianer)
+    }
+    moveApexContianer()
 }catch(err){
     console.log('Err', err)
     errLog(logFor,'createPageStructure()',pageID, logFile,err,logShift,logUser)
 }
 }
+
 /*================================================================ */
 //------------------- Document Elements Events
 /*================================================================*/
