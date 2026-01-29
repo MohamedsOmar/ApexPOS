@@ -12,6 +12,8 @@ let discountAccess = false,
     posCashierOnlyAccess = false,
     overRideTaxAccess = false,
     posCashierAdmin = false
+
+let allowZeroItemSelling = true
 const accessRoles = {
     SUPER_USER:       "96268806872996572510171386761347521866",
     CREATE_CUSTOMER: "95959979848418912790978149798646558686",
@@ -44,13 +46,18 @@ async function getBranchData(){
     branchTaxNum = res.branchTaxNum
     branchCurrencySymbole = res.branchCurrencySymbole
 }
+function buildApp(){
+    let div = document.createElement('div')
+    div.id = 'app'
+    div.style.cssText = 'width:auto;height:auto;position:relative'
+    document.body.appendChild(div)
+}
 async function fetchUserAccess() {
 try{
     // let data = await apex.server.process('GET_USER_ACCESS',{},{dataType: 'json'})
         userPermissions = await fetchAPI(`userAccess/${activeUser.toUpperCase()}`)|| [];
     if (userPermissions.length) {
-        const grantedRoles = new Set(userPermissions.map(item => item.role_id));
-        console.log('grantedRoles >> ', grantedRoles)
+        const grantedRoles = new Set(userPermissions.map(item => item.roleid));
         posCashierAdmin = grantedRoles.has(accessRoles.SUPER_USER);
         createCustomerAccess   = posCashierAdmin || grantedRoles.has(accessRoles.CREATE_CUSTOMER);
         posCashierOnlyAccess   = grantedRoles.has(accessRoles.POS_CASHIER);
@@ -79,12 +86,6 @@ try{
     apex.message.alert('Server error while fetching user access');
 }
 }
-function buildApp(){
-    let div = document.createElement('div')
-    div.id = 'app'
-    div.style.cssText = 'width:auto;height:auto;position:relative'
-    document.body.appendChild(div)
-}
 async function createNavBar(closeShift, cashEntry){
     await getBranchData()
     let app = document.querySelector('#app')
@@ -110,50 +111,52 @@ async function createNavBar(closeShift, cashEntry){
             </div>
             <ul class="nav-pages d-flex-c gap-10 flex-1">
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.homePage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.homePage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Dashboard</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.companyBranches} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.companyBranches} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Company Branches</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.masterDataPage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.masterDataPage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Master Data</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.masterDataPage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.masterDataPage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Accounting</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.salesInvoicePage} class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.salesInvoicePage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Sales Invoice Page</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.posPage}  class="d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.posPage}  class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>POS Page</span>
                     </a>
-                <li class="d-flex algn-i-c cntnt-fs gap-10 hover-brdr-btn p-10 brdr-r-m t-size-m click-btn" onclick="openModelPages('Create Customer', 7)">
-                    <span class="fa fa fa-home" aria-hidden="true"></span>
-                    <span>SI-Invoice</span>
+                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn" onclick="openModelPages('Create Customer', 7)">
+                    <div class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
+                        <span class="fa fa fa-home" aria-hidden="true"></span>
+                        <span>SI-Invoice</span>
+                    </div>
                 </li>
             </ul>
             <div class="nav-actions d-flex-c gap-10 p-10 t-size-4 t-clr-5">
                 ${createCashAccess && cashEntry ? `
-                    <div class="d-flex algn-i-c cntnt-fs gap-10 hover-brdr-btn p-10 brdr-r-m t-size-m click-btn t-clr-7" 
+                    <div class="w-100 btn-style-brdr d-flex algn-i-c cntnt-c gap-10 hover-brdr-btn p-10 brdr-r-m t-size-m click-btn" 
                         id="createCashEntryBtn" onclick="createCashEnrty()">
-                        <span class="fa fa-bitcoin" aria-hidden="true"></span>
+                        <span class="t-size-m fa fa-bitcoin" aria-hidden="true"></span>
                         <span>Cash In/Out</span>
                     </div>
                 ` : ''}
@@ -183,7 +186,7 @@ async function createNavBar(closeShift, cashEntry){
                     <span class="fa fa-times-square" aria-hidden="true"></span>
                     <div>Close Shift</div>
                 </div>`:''}
-                <a href=${pages.logOutUrl} class="delete-btn w-100 btn-style d-flex-r gap-10 cntnt-c algn-i-c t-size-m hover-brdr-btn click-btn p-10 brdr-r-m bg-clr-9">
+                <a href=${pages.logOutUrl} class="delete-btn w-100 d-flex-r gap-10 cntnt-c algn-i-c t-size-m click-btn p-10 brdr-r-m">
                     <span class="fa fa-sign-out" aria-hidden="true"></span>
                     <div>Log Out</div>
                 </a>
@@ -193,7 +196,20 @@ async function createNavBar(closeShift, cashEntry){
     appNavBar.appendChild(div)
     app.appendChild(appNavBar)
     applySavedTheme()
+    document.querySelector('#appNavBar').addEventListener('click',(e)=>{
+        let ele = e.target.id
+        if(ele !='appNavBar')return
+        document.querySelector('#appNavBar').classList.remove('nav-active')
+    })
 }
+$(document).on("click", "#navigationBarMenueOpen", () => {
+    // Open Navigation Bar
+    document.querySelector('#appNavBar').classList.add('nav-active')
+});
+$(document).on("click", "#navigationBarMenueClose", () => {
+    // Close Navigation Bar
+    document.querySelector('#appNavBar').classList.remove('nav-active')
+});
 // /*================================================================ */
 // //------------------------- Callback Functions
 // /*================================================================*/
@@ -491,7 +507,11 @@ function confirmMsg(msg, title = "Confirm") {
 //------------------------- Error Log
 async function errLog(logFor,errFunction,pageID, logFile,logErr,logShift,logUser){
     try{
-        let ppstData = await apex.server.process('POST_LOG_ERR',{x01: logFor,x02: errFunction,x03: pageID,x04: logFile,x05: logErr,x06: logShift,x07: logUser},{dataType:'json'})
+        let errorTxt = logErr
+        if(typeof errorTxt =='object'){
+            errorTxt= `Status Text: ${errorTxt.statusText}, Response Text: ${errorTxt.responseText}`
+        }
+        await apex.server.process('POST_LOG_ERR',{x01: logFor,x02: errFunction,x03: pageID,x04: logFile,x05: errorTxt,x06: logShift,x07: logUser},{dataType:'json'})
     }
     catch(err){
         console.error(`errLog(): ` , err)

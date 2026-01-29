@@ -37,7 +37,7 @@ try{
             </div>
         </div>
     </div>
-    <div id="cardsHolder" class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10" style="max-width:100%">
+    <div id="cardsHolder" class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10" style="margin: 0 auto;padding: 30px 0;width: 90%;">
     </div>
     `;
     contentContainer.appendChild(divContentWrapper)
@@ -49,14 +49,15 @@ try{
         let div = document.createElement('div')
         container.appendChild(div)
         let ul = document.createElement('ul')
-            ul.classList.add('d-flex','d-flx-wrap','gap-20')
+            ul.classList.add('d-grid','d-flx-wrap','gap-20')
+            ul.style.cssText='grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));' 
         apexContentContianer.querySelectorAll('ul li').forEach(ele=>{
             let hrefL = ele.querySelector('a').getAttribute('href');
             let textContent = ele.querySelector('.t-Card-title')?.textContent
             let li = document.createElement('li')
-            li.classList.add('flex-1')  
-            li.style.cssText='min-width:500px' 
-            li.innerHTML = `<a class="card-item w-100 h-100 gap-10 d-flex cntnt-c algn-i-c hover-brdr-btn hover-btn click-btn flex-1"
+            li.classList.add('flex-1','d-flex','cntnt-c','algn-i-c')  
+            // li.style.cssText='min-width:500px' 
+            li.innerHTML = `<a class="card-item w-100 h-100 gap-10 d-flex-c cntnt-c algn-i-c hover-brdr-btn hover-btn click-btn flex-1" style="height: 150px;"
                 href=${hrefL}><span style="font-size: inherit;font-weight: inherit;" class="fa fa-users" aria-hidden="true"></span> ${textContent}</a>`
             ul.appendChild(li)
         })
@@ -68,13 +69,3 @@ try{
     errLog(logFor,'createPageStructure()',pageID, logFile,err,logShift,logUser)
 }
 }
-
-/*================================================================ */
-//------------------- Document Elements Events
-/*================================================================*/
-$(document).on("click", "#navigationBarMenueOpen", () => {
-    document.querySelector('#appNavBar').classList.add('nav-active')
-});
-$(document).on("click", "#navigationBarMenueClose", () => {
-    document.querySelector('#appNavBar').classList.remove('nav-active')
-});

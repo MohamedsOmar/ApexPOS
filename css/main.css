@@ -149,6 +149,7 @@ button[type="button"].a-Button.a-Button--calendar{
   background: red;
   color: white;
   outline: transparent;
+  border-radius: 50%;
 }
 /* Form Inputs */
 .t-Form-fieldContainer,
@@ -201,6 +202,9 @@ button[type="button"].a-Button.a-Button--calendar{
 }
 .a-IRR-table{
   border: 1px solid var(--main-clr-2);
+}
+.a-IRR-table tr{
+  text-wrap: nowrap;
 }
 .a-IRR-table td{
   border-color: var(--main-clr-2);
@@ -255,14 +259,15 @@ button[type="button"].a-Button.a-Button--calendar{
 }
 .delete-btn{
   background-color: transparent;
-  border-color:red;
+  border: 1px solid red;
   color:red;
   outline-color: transparent;
 }
 .delete-btn:hover{
   background-color: red;
-  border-color:red;
-  color:var(--t-clr-1)
+  /* border-color:red; */
+  color:white;
+  border: 1px solid red;
 }
 
 .hover-btn, .hover-brdr-btn, .click-btn{transition: var(--main-transition);cursor: pointer;}
@@ -646,7 +651,20 @@ button[type="button"].a-Button.a-Button--calendar{
     z-index: 1;
 }
 #appNavBar a{
-  color: var(--t-clr-1);
+  /* color: inherit; */
+}
+/*==============================================================*/
+/*======================== Media Qury ==========================*/
+@media (max-width: 767px) {
+.nav-bar-wrapper{
+    width: 80%;
+}
+}
+  /* Medium */
+@media (max-width: 1190px) {
+.nav-bar-wrapper{
+    width: 80%;
+}
 }
 /*=================================================================================
   ------------------ Loader
