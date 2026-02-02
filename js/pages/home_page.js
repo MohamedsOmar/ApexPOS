@@ -16,14 +16,15 @@ async function initPage() {
 async function createPageStructure() {
 try{
     if(!userPermissions){return}
+    let apexContentContianer = document.querySelector('#PageContentContainer');
     let app = document.querySelector('#app')
-    let pos = document.createElement('div')
-    pos.id='pos-container'
-    pos.classList.add('pos-conatiner','width-100','flow-h','bg-clr-1','t-clr-7')  
-    let divposWrapper = document.createElement('div');
-    divposWrapper.classList.add('pos-wrapper','d-flex','cntnt-sb','h-100','w-100','d-flx-wrap','t-clr-7');
-    divposWrapper.innerHTML = `
-    <div class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10">
+    let contentContainer = document.createElement('div')
+    contentContainer.id='contentContainer'
+    contentContainer.classList.add('content-container','width-100','flow-h','bg-clr-1','t-clr-7')  
+    let divContentWrapper = document.createElement('div');
+    divContentWrapper.classList.add('content-wrapper','d-flex-c','cntnt-sb','h-100','w-100','d-flx-wrap','t-clr-7');
+    divContentWrapper.innerHTML = `
+    <div class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10  bx-shadow-s bg-clr-3">
         <div class="d-flex-r w-100 postion-r algn-i-c flow-h gap-10" style="height:25px">
             <div class="navigation-bar h-100" id="navigationBarMenueOpen">
                 <div class="nav-bar h-100 d-flex algn-i-c cursor-p">
@@ -36,11 +37,22 @@ try{
             </div>
         </div>
     </div>
-    <div id="cardsHolder" class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10" style="max-width:100%">
+    <div id="cardsHolder" class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10" style="margin: 0 auto;padding: 30px 0;width: 90%;">
     </div>
     `;
-    pos.appendChild(divposWrapper)
-    app.appendChild(pos)
+    contentContainer.appendChild(divContentWrapper)
+    app.appendChild(contentContainer)
+    function moveApexContianer(){
+        let appContainer = document.querySelector('#app');
+        let contentContainer = appContainer.querySelector('#contentContainer');
+        let container = contentContainer.querySelector('#cardsHolder');
+        let div = document.createElement('div')
+        // div.style.cssText='box-shadow: var(--box-shadow-sec);'
+        container.appendChild(div)
+        div.appendChild(apexContentContianer)
+        apexContentContianer.style.cssText='display:block'
+    }
+    moveApexContianer()
 }catch(err){
     console.log('Err', err)
     errLog(logFor,'createPageStructure()',pageID, logFile,err,logShift,logUser)

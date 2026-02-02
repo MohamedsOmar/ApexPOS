@@ -7,12 +7,20 @@ applySavedTheme()
 #WORKSPACE_FILES#main#MIN#.css
 
 
-
+/**For Modal Pages */
 form#wwvFlowForm {
     min-height: 100vh;
     background-color: var(--bg-clr-1);
     color: var(--t-clr-1);
 }
+
+
+
+/* For Full Pages */
+#PageContentContainer{
+    display: none;
+}
+
 
 delete-btn
 apply-btn
@@ -39,6 +47,11 @@ WHERE UPPER(:APP_USER) = UPPER(EMP_NAME)
 WHERE tr.DELETED <> 1
 DECODE(tr.DEFAULT_VALUE, 'Y','Yes','No') "Default",
 DECODE(tr.TR_ENABLED, 'Y', 'Active','Inactive') Status
+DECODE(et.POSTED_REC, '1','Posted', 'Not Posted')
+
 (select cb.BRANCH_NAME from COMPANY_BRANCHES cb where cb.BRANCH_ID = u.EMP_BRANCH) EMP_BRANCH,
 (select au.EMP_NAME from app_users au where au.EMP_ID = u.CREATED_BY) CREATED_BY,
 (select au.EMP_NAME from app_users au where au.EMP_ID = u.UPDATED_BY) UPDATED_BY,
+
+(select cb.BRANCH_NAME from COMPANY_BRANCHES cb where cb.BRANCH_ID = al.COMPANY_ID) COMPANY
+(select alca.C_ACC_NAME from APP_LEDGER_CHILD_ACCS alca where alca.C_ACC_ID =al.ENTRY_ACC ) Entry_Account,

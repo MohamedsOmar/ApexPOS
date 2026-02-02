@@ -2,10 +2,10 @@ let userPermissions,
     sessionID = apex.env.APP_SESSION,
     appID = apex.env.APP_ID,
     activeUser = apex.env.APP_USER
-let branchLogo, branchID,branchName,branchRegNum,branchTaxNum, branchCurrencySymbole
+let branchLogo, branchID,branchName,branchRegNum,branchTaxNum, branchCurrencySymbole, allowZeroItemSelling
 let baseUrl = `https://g6d02ee2f2519a5-financeapp.adb.ca-toronto-1.oraclecloudapps.com/ords/api/app/`
 var logFor='JavaScript', pageID = 0, logFile ='main.js', logShift = 0, logUser = activeUser
-
+console.log(apex.env.APP_PAGE_ID)
 let discountAccess = false,
     createCashAccess = false,
     createCustomerAccess = false,
@@ -13,7 +13,6 @@ let discountAccess = false,
     overRideTaxAccess = false,
     posCashierAdmin = false
 
-let allowZeroItemSelling = true
 const accessRoles = {
     SUPER_USER:       "96268806872996572510171386761347521866",
     CREATE_CUSTOMER: "95959979848418912790978149798646558686",
@@ -28,15 +27,17 @@ const pages = {
     masterDataPage: `/ords/r/api/carved/master-data-page?session=${sessionID}`,
     salesInvoicePage :`/ords/r/api/carved/sales-invoice-page?=${sessionID}`,
     posPage :`/ords/r/api/carved/pos-si-page?session=${sessionID}`,
+    accountingPage :`/ords/r/api/carved/accounting?session=${sessionID}`,
+    employeeTrxsPage :`/ords/r/api/carved/employees-transactions-page?session=${sessionID}`,
     logOutUrl :`apex_authentication.logout?p_app_id=101&p_session_id=${sessionID}`,
 }
 async function getBranchData(){
     let option = `?q={"empinternalname":"${activeUser}"}`
     let endPoint = `appUsers${option}`
     let res = await fetchAPI(endPoint)
+        res = res[0]
     let branchid = res.branchid
-    option = `?q={"branchID":"${branchid}"}`
-    endPoint = `companyInfo${option}`
+    endPoint = `companyInfo/${branchid}`
     res = await fetchAPI(endPoint)
     res = res[0]
     branchLogo = res.branchLogo
@@ -45,12 +46,22 @@ async function getBranchData(){
     branchRegNum = res.branchRegNum
     branchTaxNum = res.branchTaxNum
     branchCurrencySymbole = res.branchCurrencySymbole
+    allowZeroItemSelling =  res.allowZeroItemSelling =='Y' ? true : false
 }
 function buildApp(){
     let div = document.createElement('div')
     div.id = 'app'
     div.style.cssText = 'width:auto;height:auto;position:relative'
     document.body.appendChild(div)
+    let divMessage = document.createElement('div')
+    divMessage.id = 'sideMessage'
+    divMessage.classList.add('postion-a','cntnt-c','algn-i-c','p-20','t-bold')
+    divMessage.innerHTML = `
+    <div class="msgContent-wrap d-flex-r gap-10"> 
+        <div class="msgIcon"><span class="fa "></span></div>
+        <div class="msgContent"></div>
+    </div>`
+    div.appendChild(divMessage)
 }
 async function fetchUserAccess() {
 try{
@@ -129,9 +140,15 @@ async function createNavBar(closeShift, cashEntry){
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
-                    <a href=${pages.masterDataPage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
+                    <a href=${pages.accountingPage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
                         <span class="fa fa fa-home" aria-hidden="true"></span>
                         <span>Accounting</span>
+                    </a>
+                </li>
+                <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
+                    <a href=${pages.employeeTrxsPage} class=" t-clr-5 d-flex w-100 algn-i-c cntnt-fs gap-10">
+                        <span class="fa fa fa-home" aria-hidden="true"></span>
+                        <span>Employees Transactions</span>
                     </a>
                 </li>
                 <li class="d-flex hover-brdr-btn p-10 brdr-r-m t-size-m click-btn">
@@ -278,6 +295,7 @@ async function fetchAPI(endPoint){
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const res = await response.json();
+        let hasMore = res.hasMore
         const items = res.items;
         return items; 
     } catch(err){
@@ -408,19 +426,29 @@ function removeElementWithID(eleID){
     eleToRemove.remove()
 }
 //------------------------- Error Message
-function errMessage(msg){  
-    apex.message.showPageSuccess(msg); 
-    $('#t_Alert_Success').attr('style','background-color: #ffe5ad;');
-    $('.t-Alert-title').attr('style','color: black;font-weight: bold;');
-    $('#t_Alert_Success div div.t-Alert-icon span').removeClass('t-Icon').addClass('fa fa-warning');
-    setTimeout(function() {
-        apex.message.hidePageSuccess();
-    }, 3000);
-}
-function successMessage(msg){  
-    apex.message.showPageSuccess(msg); 
-    setTimeout(function() {
-        apex.message.hidePageSuccess();
+
+function sideMessage(msg, msgType){
+    let types = {
+        error :  {icon:'fa-exclamation-circle', bgColor:'#f11313', tColor:'#fff'},
+        warning: {icon:'fa-warning', bgColor:'#ffee00', tColor:'#fff'},
+        success: {icon:'fa-check-circle', bgColor:'#13f168', tColor:'#fff'},
+        info :   {icon:'fa-info-circle', bgColor:'#05a3ff', tColor:'#fff'},
+    }  
+    selectedType = types[msgType];
+    let sideMessage = document.querySelector('#sideMessage')
+    let msgContent = sideMessage.querySelector('.msgContent')
+    let msgIcon = sideMessage.querySelector('.msgIcon span')
+    sideMessage.style.cssText = `background-color:${selectedType.bgColor}; color:${selectedType.tColor}`
+
+    msgContent.textContent = msg
+    msgIcon.classList.remove('fa-exclamation-circle','fa-warning','fa-check-circle','fa-info-circle')
+    msgIcon.classList.add(selectedType.icon)
+    sideMessage.style.display = 'flex'
+    // document.addEventListener('click',(e)=>{
+    //     sideMessage.style.display='none'
+    // })
+    setTimeout(() => {
+        sideMessage.style.display = 'none';
     }, 3000);
 }
 function showLoader(elementToAppend){

@@ -27,7 +27,7 @@ try{
     let divContentWrapper = document.createElement('div');
     divContentWrapper.classList.add('content-wrapper','d-flex-c','cntnt-sb','h-100','w-100','d-flx-wrap','t-clr-7');
     divContentWrapper.innerHTML = `
-    <div class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10">
+    <div class="content-row d-flex h-100 d-flex-c flex-1 cntnt-sb gap-10 p-10  bx-shadow-s bg-clr-3">
         <div class="d-flex-r w-100 postion-r algn-i-c flow-h gap-10" style="height:25px">
             <div class="navigation-bar h-100" id="navigationBarMenueOpen">
                 <div class="nav-bar h-100 d-flex algn-i-c cursor-p">
@@ -53,6 +53,7 @@ try{
         div.style.cssText='box-shadow: var(--box-shadow-sec);'
         container.appendChild(div)
         div.appendChild(apexContentContianer)
+        apexContentContianer.style.cssText='display:block'
     }
     moveApexContianer()
 }catch(err){
