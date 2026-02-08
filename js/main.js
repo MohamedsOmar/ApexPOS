@@ -5,7 +5,7 @@ let userPermissions,
 let branchLogo, branchID,branchName,branchRegNum,branchTaxNum, branchCurrencySymbole, allowZeroItemSelling
 let baseUrl = `https://g6d02ee2f2519a5-financeapp.adb.ca-toronto-1.oraclecloudapps.com/ords/api/app/`
 var logFor='JavaScript', pageID = 0, logFile ='main.js', logShift = 0, logUser = activeUser
-console.log(apex.env.APP_PAGE_ID)
+// console.log(apex.env.APP_PAGE_ID)
 let discountAccess = false,
     createCashAccess = false,
     createCustomerAccess = false,
@@ -57,7 +57,7 @@ function buildApp(){
     divMessage.id = 'sideMessage'
     divMessage.classList.add('postion-a','cntnt-c','algn-i-c','p-20','t-bold')
     divMessage.innerHTML = `
-    <div class="msgContent-wrap d-flex-r gap-10"> 
+    <div class="msgContent-wrap d-flex-r gap-10 algn-i-c cntnt-c"> 
         <div class="msgIcon"><span class="fa "></span></div>
         <div class="msgContent"></div>
     </div>`
@@ -416,41 +416,18 @@ function createOverlay(){
     div.id ='overlay-container'
     div.innerHTML =` <div class="overlay-content" id="overlay-content"></div>`
     document.body.appendChild(div)
+    document.body.style.overflow = 'hidden'
 }
 function removerOverlay(){
     let posOverlay = document.getElementById('overlay-container')
     posOverlay.remove()
+    document.body.style.overflow = 'auto'
 }
 function removeElementWithID(eleID){
     let eleToRemove = document.getElementById(eleID)
     eleToRemove.remove()
 }
 //------------------------- Error Message
-
-function sideMessage(msg, msgType){
-    let types = {
-        error :  {icon:'fa-exclamation-circle', bgColor:'#f11313', tColor:'#fff'},
-        warning: {icon:'fa-warning', bgColor:'#ffee00', tColor:'#fff'},
-        success: {icon:'fa-check-circle', bgColor:'#13f168', tColor:'#fff'},
-        info :   {icon:'fa-info-circle', bgColor:'#05a3ff', tColor:'#fff'},
-    }  
-    selectedType = types[msgType];
-    let sideMessage = document.querySelector('#sideMessage')
-    let msgContent = sideMessage.querySelector('.msgContent')
-    let msgIcon = sideMessage.querySelector('.msgIcon span')
-    sideMessage.style.cssText = `background-color:${selectedType.bgColor}; color:${selectedType.tColor}`
-
-    msgContent.textContent = msg
-    msgIcon.classList.remove('fa-exclamation-circle','fa-warning','fa-check-circle','fa-info-circle')
-    msgIcon.classList.add(selectedType.icon)
-    sideMessage.style.display = 'flex'
-    // document.addEventListener('click',(e)=>{
-    //     sideMessage.style.display='none'
-    // })
-    setTimeout(() => {
-        sideMessage.style.display = 'none';
-    }, 3000);
-}
 function showLoader(elementToAppend){
     elementToAppend.style.position = 'relative';
     let div = document.createElement('div');
@@ -483,6 +460,30 @@ function removeLaoder(appendedParent){
     appendedParent.style.position = null;
     let posLoading = document.getElementById('loadingAnimation')
     posLoading.remove()
+}
+function sideMessage(msg, msgType){
+    let types = {
+        error :  {icon:'fa-exclamation-circle', bgColor:'#f11313', tColor:'#fff'},
+        warning: {icon:'fa-warning', bgColor:'#ffee00', tColor:'#fff'},
+        success: {icon:'fa-check-circle', bgColor:'#13f168', tColor:'#fff'},
+        info :   {icon:'fa-info-circle', bgColor:'#05a3ff', tColor:'#fff'},
+    }  
+    let selectedType = types[msgType];
+    let sideMessage = document.querySelector('#sideMessage')
+    let msgContent = sideMessage.querySelector('.msgContent')
+    let msgIcon = sideMessage.querySelector('.msgIcon span')
+    sideMessage.style.cssText = `background-color:${selectedType.bgColor}; color:${selectedType.tColor}`
+
+    msgContent.textContent = msg
+    msgIcon.classList.remove('fa-exclamation-circle','fa-warning','fa-check-circle','fa-info-circle')
+    msgIcon.classList.add(selectedType.icon)
+    sideMessage.style.display = 'flex'
+    sideMessage.addEventListener('click',()=>{
+        sideMessage.style.display = 'none';
+    })
+    // setTimeout(() => {
+    //     sideMessage.style.display = 'none';
+    // }, 3000);
 }
 function confirmMsg(msg, title = "Confirm") {
     return new Promise((resolve) => {
@@ -550,110 +551,215 @@ async function errLog(logFor,errFunction,pageID, logFile,logErr,logShift,logUser
 //------------------------- Components
 /*================================================================*/
 
-//------------------------- Custom Date Picker
-function renderDateicker(){
-    const daysContainer = document.getElementById("daysContainer");
-    const prevBtn = document.getElementById("prevBtn");
-    const nextBtn = document.getElementById("nextBtn");
-    const monthYear = document.getElementById("monthYear");
-    const dateInput = document.getElementById("dateInput");
-    const calendar = document.getElementById("calendar");
+/*============================= Date Picker Comp ===================================*/
+document.addEventListener("DOMContentLoaded", ()=>{
+    let datePickerContiners = document.querySelectorAll(".datePickerContiner");
+    datePickerContiners.forEach((ele) => {
+    if (ele) {
+        intializeDatePicker();
+    }
+    });
+});
+function intializeDatePicker() {
+    const monthSelect = document.getElementById("month-select");
+    const yearSelect = document.getElementById("year-select");
+    const daysTag = document.querySelector(".days");
+    const prevNextIcons = document.querySelectorAll(".icons span");
+    let date = new Date(),
+    currentYear = date.getFullYear(),
+    currentMonth = date.getMonth();
+    let selectedDateObj = null;
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-    let currentDate = new Date();
-    let selectedDate = null;
+    for (let i = 0; i < months.length; i++) {
+        let option = document.createElement("div");
+        option.classList += " calendar-select-list";
+        option.id = `option-${i}`;
+        option.value = i;
+        if (currentMonth === i) {
+            option.classList += " month active";
+        }
+        option.addEventListener("click", function () {
+            toggleDropdownMonth(i, months[i]);
+        });
+        option.textContent = months[i];
+        monthSelect.appendChild(option);
+    }
 
-    function handleDayClick(day) {
-    selectedDate = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        day
-    );
+    for (let i = currentYear - 50; i <= currentYear + 50; i++) {
+    let option = document.createElement("div");
+    option.classList += " calendar-select-list";
+    option.value = i;
+    option.id = `option-${i}`;
+    if (currentYear === i) {
+        option.classList += " year active";
+    }
+    option.textContent = i;
+    option.addEventListener("click", function () {
+        toggleDropdownYear(i);
+    });
+    yearSelect.appendChild(option);
+    }
+    const backdrop = document.getElementById("calendar-backdrop");
+    const calendarWrapper = document.getElementById("calendar-wrapper");
+    backdrop.addEventListener("click", (e) => {
+        e.stopPropagation();
+        calendarWrapper.classList.add("show-calender");
+    });
 
-    const options = {
-        year: 'numeric',
-        month: 'long',
-        day: '2-digit',
-        weekday: 'long'
+    document.addEventListener("click", (e) => {
+    if (!calendarWrapper.contains(e.target) && !backdrop.contains(e.target)) {
+        calendarWrapper.classList.remove("show-calender");
+        monthSelect.classList.remove("show-dropdown");
+        yearSelect.classList.remove("show-dropdown");
+    }
+    });
+
+    monthSelect.value = currentMonth;
+    yearSelect.value = currentYear;
+    const toggleCalender = () => {
+        const div = document.getElementById("calendar-wrapper");
+        div.classList.toggle("show-calender");
     };
-    dateInput.value= new Intl.DateTimeFormat('en-US', options).format(selectedDate);
-    //   dateInput.value = selectedDate.toLocaleDateString("en-US");
-    calendar.style.display = "none";
-    renderCalendar();
-    }
+    const toggleDropdownMonth = (index, month) => {
+        const div = document.getElementById("month-select");
+        const year_div = document.getElementById("year-select");
+        year_div.classList.remove("show-dropdown");
+        if (month) {
+            currentMonth = index;
+            document
+            .querySelectorAll(".calendar-select-list.month.active")
+            .forEach((el) => {
+                el.classList.remove("active");
+            });
+            const div_option = document.getElementById(`option-${index}`);
+            div_option.classList += " month active";
+            renderCalendar();
+        }
+        div.classList.toggle("show-dropdown");
+    };
 
-    function createDayElement(day) {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const dayElement = document.createElement("div");
-    dayElement.classList.add("day");
-
-    if (date.toDateString() === new Date().toDateString()) {
-        dayElement.classList.add("current");
+    const toggleDropdownYear = (year) => {
+    const div = document.getElementById("year-select");
+    const month_div = document.getElementById("month-select");
+    month_div.classList.remove("show-dropdown");
+    if (year) {
+        currentYear = year;
+        document
+        .querySelectorAll(".calendar-select-list.year.active")
+        .forEach((el) => {
+            el.classList.remove("active");
+        });
+        const div_option = document.getElementById(`option-${year}`);
+        div_option.classList += " year active";
+        renderCalendar();
     }
-    if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
-        dayElement.classList.add("selected");
-    }
+    div.classList.toggle("show-dropdown");
+    };
+    const renderCalendar = () => {
+        let firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+        let lastDateOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        let lastDayOfMonth = new Date(
+            currentYear,
+            currentMonth,
+            lastDateOfMonth,
+        ).getDay();
+        const dropdown_month = document.getElementById("selected-month");
+        dropdown_month.innerText = months[currentMonth];
+        const dropdown_year = document.getElementById("selected-year");
+        dropdown_year.innerText = currentYear;
+        let lastDateOfLastMonth = new Date(currentYear, currentMonth, 0).getDate();
+        let liDayTag = "";
 
-    dayElement.textContent = day;
-    dayElement.addEventListener("click", () => {
-        handleDayClick(day);
+        for (let i = firstDayOfMonth; i > 0; i--) {
+            liDayTag += `<li class="inactive">${lastDateOfLastMonth - i + 1}</li>`;
+        }
+
+        for (let i = 1; i <= lastDateOfMonth; i++) {
+            let isToday = "";
+            if (selectedDateObj) {
+            if (
+                i === selectedDateObj.getDate() &&
+                currentMonth === selectedDateObj.getMonth() &&
+                currentYear === selectedDateObj.getFullYear()
+            ) {
+                isToday = 'class="active selectDate"';
+            }
+            } else {
+            if (
+                i === date.getDate() &&
+                currentMonth === new Date().getMonth() &&
+                currentYear === new Date().getFullYear()
+            ) {
+                isToday = 'class="active selectDate"';
+            }
+            }
+        //   liDayTag += `<li ${isToday} onclick="selectDate(${i})" class="selectDate">${i}</li>`;
+            liDayTag += `<li ${isToday} class="selectDate">${i}</li>`;
+        }
+
+        for (let i = lastDayOfMonth; i < 6; i++) {
+            liDayTag += `<li class="inactive">${i - lastDayOfMonth + 1}</li>`;
+        }
+
+        daysTag.innerHTML = liDayTag;
+
+        let days = daysTag.querySelectorAll('.selectDate')
+        days.forEach((day)=>{
+            day.addEventListener('click',(e)=>{
+                console.log(e.target.textContent)
+                selectDate(e.target.textContent)
+            })
+        })
+    };
+    renderCalendar(currentMonth, currentYear);
+
+    monthSelect.addEventListener("change", (e) => {
+        currentMonth = parseInt(e.target.value);
+        renderCalendar();
     });
-    daysContainer.appendChild(dayElement);
-    }
 
-    function renderCalendar() {
-    daysContainer.innerHTML = "";
-    const firstDay = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        1
-    );
-    const lastDay = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        0
-    );
+    yearSelect.addEventListener("change", (e) => {
+        currentYear = parseInt(e.target.value);
+        renderCalendar();
+    });
+    prevNextIcons.forEach((icon) => {
+        icon.addEventListener("click", () => {
+            currentMonth =
+            icon.id === "prevIcon" ? currentMonth - 1 : currentMonth + 1;
 
-    monthYear.textContent = `${currentDate.toLocaleString("default", {
-        month: "long"
-    })} ${currentDate.getFullYear()}`;
+            if (currentMonth < 0 || currentMonth > 11) {
+            date = new Date(currentYear, currentMonth);
+            currentYear = date.getFullYear();
+            currentMonth = date.getMonth();
+            return;
+            } else {
+            date = new Date();
+            }
 
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        createDayElement(day);
-    }
-    }
-
-    prevBtn.addEventListener("click", () => {
-    currentDate.setMonth(currentDate.getMonth() - 1);
-    renderCalendar();
+            renderCalendar();
+        });
     });
 
-    nextBtn.addEventListener("click", () => {
-    currentDate.setMonth(currentDate.getMonth() + 1);
-    renderCalendar();
-    });
+    function selectDate(day){
+        const selectedDateText = document.querySelector(".selected-date-text");
+        // Format: DD/MM/YYYY
+        const formattedDate = `${day}/${currentMonth + 1}/${currentYear}`;
+        selectedDateText.innerText = formattedDate;
 
-    dateInput.addEventListener("click", () => {
-    calendar.style.display = "block";
-    positionCalendar();
-    });
+        selectedDateObj = new Date(currentYear, currentMonth, day);
+        renderCalendar();
 
-    document.addEventListener("click", (event) => {
-    if (!dateInput.contains(event.target) && !calendar.contains(event.target)) {
-        calendar.style.display = "none";
-    }
-    });
+        // Close calendar
+        const calendarWrapper = document.getElementById("calendar-wrapper");
+        calendarWrapper.classList.remove("show-calender");
 
-    function positionCalendar() {
-    const inputRect = dateInput.getBoundingClientRect();
-    //   calendar.style.top = inputRect.bottom + "px";
-    //   calendar.style.left = inputRect.left + "px";
-    }
-    window.addEventListener("resize", positionCalendar);
-
-    renderCalendar();
+        // Close dropdowns if open (just in case)
+        monthSelect.classList.remove("show-dropdown");
+        yearSelect.classList.remove("show-dropdown");
+    };
 }
-
-//------------------------- Custom Drop Down List
+/*============================= Custom Drop Down List ===================================*/
 function setupCustomDropdown(parentElement) {
     let wrapper = parentElement;
     let selectedDiv = wrapper.querySelector('.li-selected');
@@ -696,7 +802,6 @@ function setupCustomDropdown(parentElement) {
     // Select an option when clicking an <li>
     ul.addEventListener('click', (e) => {
         const li = e.target.closest('li');
-        console.log(li)
         if (li) {
             const dataValue = li.dataset.value;
             const value = li.value;

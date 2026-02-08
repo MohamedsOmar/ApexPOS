@@ -177,8 +177,6 @@ try{
                     <div id="sInvType" data-value=""></div>
                     <div id="sInvDate" data-value=""></div>
                     <div id="sCustomerId" data-value=""></div>
-                    <div id="sInvVat" data-value=""></div>
-                    <div id="sTaxRateID" data-value=""></div>
                     <div id="sInvPayMethod" data-value=""></div>
                     <div id="sInvDiscount" data-value=""></div>
                     <div id="sInvSubTotal" data-value=""></div>
@@ -534,7 +532,7 @@ async function fetchPaymentMethods() {
     }
 }
 /* ------------------------ Get Selected Invoice Details ------------------------ */
-function triggerChangedInvoice(){
+async function triggerChangedInvoice(){
 try{
     if(!invoiceID){
         invoiceID = 0
@@ -554,13 +552,11 @@ try{
     headerSrcDataContainer.querySelector("#sEmpBranch").setAttribute('data-value',""); 
     headerSrcDataContainer.querySelector("#sInvType").setAttribute('data-value',"")
     headerSrcDataContainer.querySelector("#sCustomerId").setAttribute('data-value',"")
-    headerSrcDataContainer.querySelector("#sInvVat").setAttribute('data-value',"")
     headerSrcDataContainer.querySelector("#sInvPayMethod").setAttribute('data-value',"")
     headerSrcDataContainer.querySelector("#sInvDiscount").setAttribute('data-value',"")
     headerSrcDataContainer.querySelector("#sInvSubTotal").setAttribute('data-value',"")
     headerSrcDataContainer.querySelector("#sInvTaxAmt").setAttribute('data-value', '');
     headerSrcDataContainer.querySelector("#sInvTotal").setAttribute('data-value', '');
-    headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', '');
 
     const numbers = document.querySelectorAll('.pos-t-container .numbers .number');
         numbers[0].querySelector('span:nth-child(2)').textContent = `00.00 ${branchCurrencySymbole}`;
@@ -585,7 +581,6 @@ try{
         headerSrcDataContainer.querySelector("#sInvDate").setAttribute('data-value',header.invDate);
         headerSrcDataContainer.querySelector("#sEmpBranch").setAttribute('data-value',header.invBranch); 
         headerSrcDataContainer.querySelector("#sInvType").setAttribute('data-value', header.invType)
-        headerSrcDataContainer.querySelector("#sInvVat").setAttribute('data-value',header.invTaxRateValue)
         headerSrcDataContainer.querySelector("#sInvTaxAmt").setAttribute('data-value', header.invTaxAmt);
         headerSrcDataContainer.querySelector("#sInvDiscount").setAttribute('data-value',header.discount)
         headerSrcDataContainer.querySelector("#sInvSubTotal").setAttribute('data-value',header.invTotalLessDiscount)
@@ -593,7 +588,6 @@ try{
         headerSrcDataContainer.querySelector("#sInvFinalTotal").setAttribute('data-value', header.invFinalTotal);
         headerSrcDataContainer.querySelector("#sInvPayMethod").setAttribute('data-value',  header.payMethodID);
         headerSrcDataContainer.querySelector("#sCustomerId").setAttribute('data-value',header.customerID)
-        headerSrcDataContainer.querySelector("#sTaxRateID").setAttribute('data-value', header.invTaxID);
     }
 }catch(err){
     console.error(err);
@@ -744,7 +738,7 @@ try{
             linetaxRateValue = 14
             saveLine();
         });
-        // triggerChangedInvoice()
+        await triggerChangedInvoice()
         await fetchOpenInvoices();
         sideMessage(`Invoice ${invNo} Created Successfully`,'info')
         return invoiceID
@@ -1019,7 +1013,6 @@ try{
     let invDate = selectedValues.querySelector("#sInvDate").getAttribute("data-value");
     let invPayment = selectedValues.querySelector("#sInvFinalTotal").getAttribute("data-value");
     let customerID = selectedValues.querySelector("#sCustomerId").getAttribute("data-value");
-    let invTaxID = selectedValues.querySelector("#sTaxRateID").getAttribute("data-value");
 
     if(overlayConetent){
         invDiscount = overlayConetent.querySelector("#invDiscount").value ;
@@ -1030,14 +1023,14 @@ try{
     }
     if(!payMethodID)return
 
-    if(!invoiceID || !customerID || !payMethodID || !invTaxID){
+    if(!invoiceID || !customerID || !payMethodID){
         sideMessage('Invoice Header Must be Completed for Saving','warning')
         return;
     }
     try{
         let res = await apex.server.process('SAVE_INV_HEADER_DATA',{
             x01: invoiceID, x02: customerID, x03: payMethodID, x04: invDate, 
-            x05: empBranch, x06: invType, x07: invTaxID,  x08: invClosed, 
+            x05: empBranch, x06: invType,  x08: invClosed, 
             x09: parseFloat(invDiscount), x10: parseFloat(invPayment)
         },{dataType:"json"})
         if (res.status !== "SUCCESS") {
@@ -1063,7 +1056,7 @@ try{
         errLog(logFor,`saveInvoiceHeader(${invClosed}) => PostData`,pageID, logFile,err,logShift,logUser)
     }
 }catch(err){
-    console.log('Err', err)
+    console.error('Err', err)
     errLog(logFor,'saveInvoiceHeader()=> Data Capture',pageID, logFile,err,logShift,logUser)
 } 
 }

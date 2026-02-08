@@ -55,46 +55,131 @@ try{
     }
     moveApexContianer()
 }catch(err){
-    console.log('Err', err)
+    console.error('Err', err)
     errLog(logFor,'createPageStructure()',pageID, logFile,err,logShift,logUser)
 }
 }
 
-
 function openCreateAccountingPage(){
+    let processName, processDispalyName, processEndDate, processComment
     try{
     createOverlay()
-    let posOverlay = document.getElementById('overlay-container');
-        // posOverlay.style.backgroundColor = '#00000040'
     let overlayConetent = document.querySelector('#overlay-content')
     let div = document.createElement('div')
     div.id = 'contentWrap'
     div.className = 'content-body-wrap'
     div.innerHTML=`
-        <div class="content-body" style="width: 400px;height: auto">
+        <div class="content-body" style="width: 400px;height: auto;overflow: visible;">
         <div class="form-wrap">
             <div class="form-title">Create Accounting</div>
             <div class="form-data">
                 <div class="content-wrapper d-flex-c w-100 gap-20 cntnt-c algn-i-c">
-                    <div class="content-row d-flex gap-10 algn-i-c  w-100">
+                    <div class="content-row d-flex gap-10 algn-i-c w-100">
                         <div class="inputGroup">
-                            <label for="cashamount">Create Accounting Process</label>
-                            <div id="selectCreateAccountingProcess" class="ul-select-wrapper input" style="position: relative;">
-                                <div class="li-selected" data-value="">Select Value</div>
-                                <div class="dropdown-list" style="position: absolute;">
-                                    <input placeholder="Search..." type="text" class="dropdown-menu-search">
-                                    <ul class="ul-dropdown-inner">
-                                        <li value="0" data-value="CREATE_ACCOUNTING_POS_PAYMENTS">POS Payment</li>
-                                        <li value="0" data-value="CREATE_ACCOUNTING_POS_PAYMENTS">POS Payment</li>
-                                    </ul>
+                            <label for="processEndDate">As Of Date</label>
+                            <div class="datePickerContiner">
+                                <div class="calendar-main">
+                                    <div class="calendar-drop-main" id="calendar-backdrop">
+                                        <span class="calendar-drop-text selected-date-text" id="processEndDate"></span>
+                                        <svg fill="#fff" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                            <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                            <g id="SVGRepo_iconCarrier">
+                                                <path
+                                                    d="m22 2.25h-3.25v-1.5c-.014-.404-.344-.726-.75-.726s-.736.322-.75.725v.001 1.5h-4.5v-1.5c-.014-.404-.344-.726-.75-.726s-.736.322-.75.725v.001 1.5h-4.5v-1.5c-.014-.404-.344-.726-.75-.726s-.736.322-.75.725v.001 1.5h-3.25c-1.104 0-2 .895-2 1.999v17.75c0 1.105.895 2 2 2h20c1.105 0 2-.895 2-2v-17.75c0-1.104-.896-1.999-2-1.999zm.5 19.75c0 .276-.224.499-.499.5h-20.001c-.276 0-.5-.224-.5-.5v-17.75c.001-.276.224-.499.5-.499h3.25v1.5c.014.404.344.726.75.726s.736-.322.75-.725v-.001-1.5h4.5v1.5c.014.404.344.726.75.726s.736-.322.75-.725v-.001-1.5h4.5v1.5c.014.404.344.726.75.726s.736-.322.75-.725v-.001-1.5h3.25c.276 0 .499.224.499.499z">
+                                                </path>
+                                                <path d="m5.25 9h3v2.25h-3z"></path>
+                                                <path d="m5.25 12.75h3v2.25h-3z"></path>
+                                                <path d="m5.25 16.5h3v2.25h-3z"></path>
+                                                <path d="m10.5 16.5h3v2.25h-3z"></path>
+                                                <path d="m10.5 12.75h3v2.25h-3z"></path>
+                                                <path d="m10.5 9h3v2.25h-3z"></path>
+                                                <path d="m15.75 16.5h3v2.25h-3z"></path>
+                                                <path d="m15.75 12.75h3v2.25h-3z"></path>
+                                                <path d="m15.75 9h3v2.25h-3z"></path>
+                                            </g>
+                                        </svg>
+                                    </div>
+                                    <div class="calendar-wrapper" id="calendar-wrapper">
+                                        <div class="calendar-header">
+                                            <div class="calendar-select-main">
+                                                <div class="calendar-select-wrapper">
+                                                    <div class="calendar-select">
+                                                        <div id="selected-month" onclick="toggleDropdownMonth()">
+                                                            Select month
+                                                        </div>
+                                                        <div class="calendar-select-list-wrap" id="month-select"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="calendar-select-wrapper">
+                                                    <div class="calendar-select">
+                                                        <div id="selected-year" onclick="toggleDropdownYear()">
+                                                            Select year
+                                                        </div>
+                                                        <div class="calendar-select-list-wrap" id="year-select"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="icons">
+                                                <span id="prevIcon" class="leftIcon">
+                                                    <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                                        <g id="SVGRepo_iconCarrier">
+                                                            <path
+                                                                d="M14.9991 19L9.83911 14C9.56672 13.7429 9.34974 13.433 9.20142 13.0891C9.0531 12.7452 8.97656 12.3745 8.97656 12C8.97656 11.6255 9.0531 11.2548 9.20142 10.9109C9.34974 10.567 9.56672 10.2571 9.83911 10L14.9991 5"
+                                                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                        </g>
+                                                    </svg>
+                                                </span>
+                                                <span id="nextIcon" class="rightIcon">
+                                                    <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                                        <g id="SVGRepo_iconCarrier">
+                                                            <path
+                                                                d="M9 5L14.15 10C14.4237 10.2563 14.6419 10.5659 14.791 10.9099C14.9402 11.2539 15.0171 11.625 15.0171 12C15.0171 12.375 14.9402 12.7458 14.791 13.0898C14.6419 13.4339 14.4237 13.7437 14.15 14L9 19"
+                                                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                        </g>
+                                                    </svg>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="calendar">
+                                            <ul class="weeks">
+                                                <li>Su</li>
+                                                <li>Mo</li>
+                                                <li>Tu</li>
+                                                <li>We</li>
+                                                <li>th</li>
+                                                <li>fr</li>
+                                                <li>sa</li>
+                                            </ul>
+                                            <ul class="days"></ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="content-row d-flex gap-10 algn-i-c w-100">
+                    <div class="content-row d-flex gap-10 algn-i-c  w-100">
                         <div class="inputGroup">
-                            <input class="input" required="" autocomplete="off" type="date" id="processEndDate">
-                            <label for="processEndDate">As Of Date</label>
+                            <label for="cashamount">Create Accounting Process</label>
+                            <div id="selectCreateAccountingProcess" class="ul-select-wrapper input" style="position: relative;">
+                                <div class="li-selected" data-value="">Select Process</div>
+                                <div class="dropdown-list" style="position: absolute;">
+                                    <input placeholder="Search..." type="text" class="dropdown-menu-search">
+                                    <ul class="ul-dropdown-inner">
+                                        <li value="0" data-value="CREATE_ACCOUNTING_SALES_TRXS">Sales Transactions</li>
+                                        <li value="0" data-value="CREATE_ACCOUNTING_REC_EXP">Recurring Expenses</li>
+                                        <li value="0" data-value="CREATE_ACCOUNTING_ASSETS">Assets Transactions</li>
+                                        <li value="0" data-value="CREATE_ACCOUNTING_PURCAHSING_TRXS">Purchasing Transactions</li>
+                                        <li value="0" data-value="CREATE_ACCOUNTING_EMP_TRXS">Employees Transactions</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="content-row d-flex gap-10 algn-i-c  w-100">
@@ -113,19 +198,34 @@ function openCreateAccountingPage(){
     overlayConetent.appendChild(div)
     let parentElement = overlayConetent.querySelector("#selectCreateAccountingProcess");
     setupCustomDropdown(parentElement)
+    intializeDatePicker()
     overlayConetent.querySelector('#createAccounting').addEventListener('click',async ()=>{
-        let processName = overlayConetent.querySelector('#selectCreateAccountingProcess .li-selected').getAttribute('data-value')
-        let processDispalyName = overlayConetent.querySelector('#selectCreateAccountingProcess .li-selected').textContent
-        let processEndDate = overlayConetent.querySelector('#processEndDate').value
-        let processComment = overlayConetent.querySelector('#entryComment').value
+        processName = overlayConetent.querySelector('#selectCreateAccountingProcess .li-selected').getAttribute('data-value')
+        processDispalyName = overlayConetent.querySelector('#selectCreateAccountingProcess .li-selected').textContent
+        processEndDate = overlayConetent.querySelector('#processEndDate').textContent
+        processComment = overlayConetent.querySelector('#entryComment').value
         if(!processName || !processEndDate || !processComment)return;
         actionConfirmed = await confirmMsg(`Create Accounting for ${processDispalyName}?`)
         if(!actionConfirmed)return;
         removerOverlay()
         sideMessage(`Create Accounting Process Submitted`,'info')
         let res = await creatAccounting(processName, processEndDate, processComment)
-        console.log(res)
-        sideMessage(`Create Accounting Process Ended for ${processDispalyName} Successfully`,'success')
+        let rowsCount = res.rowsProccessed
+        let msg = res.message
+        if(res.status =='Error'){
+            sideMessage(`Error: ${msg}`,'error')
+            return;
+        }
+        if(processName=='CREATE_ACCOUNTING_SALES_TRXS'){
+            res = await creatAccounting('CREATE_ACCOUNTING_SALES_TRXS_SOLD_ITEMS_SUB_PROCESS', processEndDate, processComment)
+            rowsCount = rowsCount + res.rowsProccessed
+            msg = res.message
+            if(res.status =='Error'){
+                sideMessage(`Error: ${msg}`,'error')
+                return;
+            }
+        }
+        sideMessage(`Create Accounting Process Ended for ${processDispalyName} Successfully - ${rowsCount} Rows Inserted`,'success')
         document.querySelector('#R33157145134648825_search_button').click()
     });
     }catch(err){

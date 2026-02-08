@@ -185,7 +185,7 @@ button[type="button"].a-Button.a-Button--calendar{
   color: var(--bg-clr-1);
   background: var(--main-clr-1);
 }
-/* Interactive Grid */
+/* -------------- Interactive Grid */
 .a-IRR{
   outline-color: transparent;
   background: var(--bg-clr-1);
@@ -215,14 +215,13 @@ button[type="button"].a-Button.a-Button--calendar{
 .a-IRR-reportView{
   background: var(--bg-clr-1);
 }
-.a-IRR-table{
-  /* border: 1px solid var(--main-clr-2); */
-}
 .a-IRR-table tbody tr:nth-child(odd){
   background-color:var(--bg-clr-2);
+  color: var(--t-clr-1);
 }
 .a-IRR-table tbody tr:nth-child(even){
   background-color:transparent;
+  color: var(--t-clr-1);
 }
 .a-IRR-table tr{
   text-wrap: nowrap;
@@ -255,15 +254,12 @@ button[type="button"].a-Button.a-Button--calendar{
 .a-IRR-sortWidget-search > .a-IRR-sortWidget-searchField[type="text"]{
   color: var(--t-clr-1);
 }
-
+.a-IRR-search{
+  border: 1px solid var(--main-clr-2);
+  border-radius: 10px;
+}
 .a-IRR-search .a-IRR-colSelector{
   z-index: 1;
-}
-.a-IRR-search .a-IRR-searchFieldContainer{
-  transform: translateX(-5px);
-}
-.a-IRR-search .a-IRR-searchButtonContainer{
-  transform: translateX(-10px);
 }
 .a-IRR-actions button,
 .a-IRR-search button{
@@ -272,7 +268,8 @@ button[type="button"].a-Button.a-Button--calendar{
 }
 .a-IRR-search-field,
 .a-IRR-search-field:focus{
-  border-color: var(--main-clr-2);
+  border-color: transparent;
+  color: var(--t-clr-1);
 }
 .a-IRR-paginationWrap--bottom{
   border-color: transparent;
@@ -291,8 +288,69 @@ button[type="button"].a-Button.a-Button--calendar{
   color: var(--t-clr-1);
 }
 
+.u-Form-inputContainer select{
+  color: var(--t-clr-1);
+}
+.a-IRR-radioIconList-item label{
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
+.u-Form-inputContainer select,
+.u-Form-inputContainer select option{
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
+.a-IRR-dialogRow--header, .a-IRR-dialogList a {
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
+.u-Form-inputContainer textarea,
+.u-Form-inputContainer input{
+  color: var(--t-clr-1);
+}
+.u-Form-inputContainer input:not([type=checkbox]):not([type=radio]),
+.u-Form-inputContainer select,
+.u-Form-inputContainer textarea {
+ color: var(--t-clr-1);
+}
+.a-Menu-content {
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
+.a-Menu-item.is-expanded .a-Menu-inner span{
+  background-color: var(--bg-clr-2);
+  color: var(--main-clr-1);
+}
+.a-Menu-content .a-Menu-inner{
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
 
-/*Region Tabs Type*/
+.a-DatePicker-header{
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
+.u-Form-inputContainer .a-Button,
+.a-IRR-col-values-drop,
+.a-IRR-col-values-drop .a-IRR-col-value,
+.a-DatePicker-monthPicker,
+.a-DatePicker-calendarContainer .a-DatePicker-calendar thead tr th,
+.a-DatePicker-calendarContainer, 
+.a-DatePicker-footer,
+.a-DatePicker select,
+.a-DatePicker select option{
+  background-color: var(--bg-clr-2);
+  color: var(--t-clr-1);
+}
+.a-DatePicker-calendarContainer .is-current span{
+  background-color: var(--main-clr-1);
+  border-color: var(--main-clr-1);
+  color: var(--t-clr-1);
+}
+.a-Button.a-DatePicker-nav span{
+  color: var(--t-clr-1);
+}
+/*---------------Region Tabs Type*/
 .t-Tabs {
   width: fit-content;
   border-radius: 10px;
@@ -562,6 +620,7 @@ button[type="button"].a-Button.a-Button--calendar{
   height: 60px;
   border-radius: 10px 0px 0px 10px;
   box-shadow: var(--box-shadow-sec);
+  cursor: pointer;
 }
 .overlay-container{
     top: 0;
@@ -678,7 +737,7 @@ button[type="button"].a-Button.a-Button--calendar{
   margin-left: 1.3em;
   padding: 0 0.4em;
   color: var(--t-clr-1);
-  background-color: var(--bg-clr-2);
+  background-color: var(--bg-clr-1);
   z-index: 1;
 }
 
@@ -954,7 +1013,7 @@ button[type="button"].a-Button.a-Button--calendar{
 
 
 /*==================================================================================*/
-/*============================= Ul Select List style ==========================*/
+/*============================= Ul Select List style ===============================*/
 /*==================================================================================*/
 @import url("https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap");
 
@@ -1071,4 +1130,184 @@ button[type="button"].a-Button.a-Button--calendar{
 .toggle-wrapper .toggle #switch:checked ~ .icon--sun {
   transition-delay: 200ms;
   transform: scale(1) rotate(360deg);
+}
+
+
+
+/*==================================================================================*/
+/*============================= Date Picker Style ==================================*/
+/*==================================================================================*/
+.calendar-main {
+    position: relative;
+}
+.calendar-main .calendar-drop-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    background-color:var(--bg-clr-1);
+    color: var(--t-clr-1);
+    padding: 12px;
+    border-radius: 6px;
+    /* width: 450px; */
+    width: 100%;
+    cursor: pointer;
+    position: relative;
+    border: 1px solid var(--main-clr-1);
+    border-radius: 10px;
+}
+.calendar-main .calendar-drop-main .calendar-drop-text {
+    font-size: 16px;
+    line-height: 26px;
+    color: var(--t-clr-1);
+}
+.calendar-main .calendar-wrapper {
+    display: none;
+    background: var(--bg-clr-2);
+    width: 100%;
+    border-radius: 10px;
+    position: relative;
+    /* margin-top: 10px; */
+}
+.calendar-main .calendar-wrapper.show-calender {
+    display: block;
+    position: absolute;
+    top: -10px;
+    box-shadow: var(--box-shadow-sec);
+    z-index: 2;
+}
+.calendar-main .calendar-wrapper .calendar-header {
+    display: flex;
+    align-items: center;
+    padding: 25px 30px 10px;
+    justify-content: space-between;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper {
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select {
+    background-color: transparent;
+    color: var(--main-clr-1);
+    font-size: 24px;
+    line-height: 26px;
+    font-weight: 500;
+    border: 0;
+    outline: none;
+    position: relative;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap {
+    display: none;
+    position: absolute;
+    top: 45px;
+    left: 0;
+    background: var(--bg-clr-1);
+    border-radius: 4px;
+    z-index: 9;
+    width: 150px;
+    height: calc(100% + 280px);
+    overflow: auto;
+    padding: 5px;
+    border: 1px solid var(--main-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap.show-dropdown {
+    display: block;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap::-webkit-scrollbar {
+    width: 4px;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 20px;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap .calendar-select-list {
+    font-size: 16px;
+    line-height: 26px;
+    font-weight: 500;
+    color: var(--t-clr-1);
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap .calendar-select-list:hover,
+.calendar-main .calendar-wrapper .calendar-header .calendar-select-main .calendar-select-wrapper .calendar-select .calendar-select-list-wrap .calendar-select-list.active {
+    color:var(--bg-clr-1);
+    background-color: var(--main-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar-header .icons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.calendar-main .calendar-wrapper .calendar-header .icons span {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50px;
+    cursor: pointer;
+}
+.calendar-main .calendar-wrapper .calendar-header .icons span svg {
+    stroke: var(--main-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar-header .icons span:hover {
+    background: var(--bg-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar {
+    padding: 20px;
+}
+.calendar-main .calendar-wrapper .calendar ul {
+    display: flex;
+    list-style: none;
+    flex-wrap: wrap;
+    text-align: center;
+}
+.calendar-main .calendar-wrapper .calendar ul li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    height: 50px;
+    width: calc(100% / 7);
+    color: var(--t-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar .weeks li {
+    text-transform: capitalize;
+    color: var(--main-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar .days li {
+    z-index: 1;
+    cursor: pointer;
+}
+.calendar-main .calendar-wrapper .calendar .days li::before {
+    position: absolute;
+    content: "";
+    width: 40px;
+    height: 40px;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+.calendar-main .calendar-wrapper .calendar .days li.active {
+    color: var(--bg-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar .days li.active::before {
+    background: var(--main-clr-1);
+    color: var(--t-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar .days li:hover::before {
+   background: var(--main-clr-1);
+}
+.calendar-main .calendar-wrapper .calendar .days li.inactive {
+    color: #919191;
 }
